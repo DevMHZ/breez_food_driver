@@ -71,11 +71,24 @@ class _HomeMapScreenState extends State<HomeMapScreen>
     _internetSub?.cancel();
     _internetSub = InternetConnection().onStatusChange.distinct().listen((
       status,
-    ) {
+    ) async {
       final ok = status == InternetStatus.connected;
       if (!mounted) return;
       if (ok == _hasInternet) return;
+
       setState(() => _hasInternet = ok);
+      _log("INTERNET => ${ok ? "CONNECTED" : "DISCONNECTED"}");
+
+      if (ok) {
+        // جرّب ترجع الاتصال
+        try {
+          await _realtime.start(connectIfOnline: _isOnline);
+          await _realtime.setOnline(_isOnline);
+          _log("REALTIME => reconnect requested (online=$_isOnline)");
+        } catch (e) {
+          _log("REALTIME => reconnect failed: $e");
+        }
+      }
     });
 
     _netSub?.cancel();
@@ -210,7 +223,7 @@ class _HomeMapScreenState extends State<HomeMapScreen>
     }
   }
 
-  // -------------------- Lifecycle
+  // -------------------- Lifecycle                                          
   @override
   void initState() {
     super.initState();
@@ -241,6 +254,7 @@ class _HomeMapScreenState extends State<HomeMapScreen>
       onLog: (m) => _log(m),
       onConnectionChanged: (connected) {
         if (!mounted) return;
+        _log("PUSHER CONNECTED? => $connected");
         setState(() => _realtimeConnected = connected);
       },
     );
@@ -280,9 +294,15 @@ class _HomeMapScreenState extends State<HomeMapScreen>
   }
 
   Future<void> _bootstrap() async {
+    final driverId = (await AuthStorageHelper.getUserId())?.toString();
+    final token = await AuthStorageHelper.getToken();
     final manualOffline =
         (await AuthStorageHelper.getFlag(AuthStorageHelper.manualOfflineKey)) ??
         false;
+
+    _log(
+      "BOOTSTRAP => driverId=$driverId tokenLen=${token?.length ?? 0} manualOffline=$manualOffline",
+    );
 
     setState(() {
       _isOnline = !manualOffline;
@@ -290,12 +310,6 @@ class _HomeMapScreenState extends State<HomeMapScreen>
     });
 
     await _realtime.start(connectIfOnline: _isOnline);
-
-    context.read<DriverLocationCubit>().setOnline(
-      _isOnline,
-      interval: kLocationSendInterval,
-    );
-
     await _realtime.setOnline(_isOnline);
   }
 
@@ -511,6 +525,9 @@ class _HomeMapScreenState extends State<HomeMapScreen>
   }
 
   void _onOfferArrived(Map<String, dynamic> offer) {
+    _log(
+      "OFFER ARRIVED ✅ showOfferSheet=$_showOfferSheet status=$_driverStatus keys=${offer.keys.toList()}",
+    );
     if (_showOfferSheet) return;
 
     _applyOfferMarkers(offer);

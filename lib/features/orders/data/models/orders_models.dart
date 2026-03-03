@@ -3,7 +3,7 @@ class DriverOrderDetails {
   final Map<String, dynamic> restaurant;
   final List<Map<String, dynamic>> items;
   final List<Map<String, dynamic>> appetizers;
-  final Map<String, dynamic> customer; // ✅ جديد
+  final Map<String, dynamic> customer; 
   DriverOrderDetails({
     required this.order,
     required this.restaurant,

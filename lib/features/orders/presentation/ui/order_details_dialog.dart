@@ -111,7 +111,7 @@ class _OrderDetailsDialogState extends State<OrderDetailsDialog> {
     _ended = true;
     _timer?.cancel();
 
-    if (mounted) setState(() {}); // يعطل الأزرار فوراً
+    if (mounted) setState(() {});
 
     unawaited(() async {
       try {
@@ -156,6 +156,11 @@ class _OrderDetailsDialogState extends State<OrderDetailsDialog> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Offer envelope fields
+    final isVip = widget.offerData['is_vip'] == true;
+    // ignore: unused_local_variable
+    final offerId = (widget.offerData['offer_id'] ?? '').toString();
+
     final order =
         (widget.offerData['order'] as Map?)?.cast<String, dynamic>() ?? {};
     final restaurant =
@@ -170,7 +175,7 @@ class _OrderDetailsDialogState extends State<OrderDetailsDialog> {
     final feeText = MoneyFormatter.formatSyp(
       context,
       deliveryFee,
-      withSymbol: true, // ✅ عملة
+      withSymbol: true,
       decimals: 0,
     );
 
@@ -185,9 +190,7 @@ class _OrderDetailsDialogState extends State<OrderDetailsDialog> {
               radius: 18,
               backgroundColor: Colors.white,
               child: Text(
-                restaurantName.isNotEmpty
-                    ? restaurantName[0].toUpperCase()
-                    : "?",
+                restaurantName.isNotEmpty ? restaurantName[0] : "?",
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -196,15 +199,45 @@ class _OrderDetailsDialogState extends State<OrderDetailsDialog> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    restaurantName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          restaurantName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      if (isVip) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.withOpacity(.18),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                              color: Colors.amber.withOpacity(.35),
+                            ),
+                          ),
+                          child: Text(
+                            "VIP",
+                            style: TextStyle(
+                              color: Colors.amber.withOpacity(.95),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   if (!_isZeroish(deliveryFee))
                     Text(
