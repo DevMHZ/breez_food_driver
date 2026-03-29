@@ -1,31 +1,38 @@
 import 'package:breez_food_driver/features/earnings/data/models/earnings_models.dart';
 
-class EarningsState {
+enum EarningsOrdersFilter { all, regular, vip }
+
+class EarningsOrdersState {
   final bool isLoading;
   final String errorMessage;
-  final EarningsOverviewData? data;
+  final EarningsOrdersData? data;
+  final EarningsOrdersFilter filter;
 
-  const EarningsState({
+  const EarningsOrdersState({
     required this.isLoading,
     required this.errorMessage,
     required this.data,
+    required this.filter,
   });
 
-  const EarningsState.initial()
+  const EarningsOrdersState.initial()
       : isLoading = false,
         errorMessage = '',
-        data = null;
+        data = null,
+        filter = EarningsOrdersFilter.all;
 
-  EarningsState copyWith({
+  EarningsOrdersState copyWith({
     bool? isLoading,
     String? errorMessage,
-    EarningsOverviewData? data,
+    EarningsOrdersData? data,
+    EarningsOrdersFilter? filter,
     bool clearError = false,
   }) {
-    return EarningsState(
+    return EarningsOrdersState(
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? '' : (errorMessage ?? this.errorMessage),
       data: data ?? this.data,
+      filter: filter ?? this.filter,
     );
   }
 }

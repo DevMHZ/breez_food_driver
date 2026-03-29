@@ -1,12 +1,11 @@
 import 'package:breez_food_driver/core/di/di.dart';
 import 'package:breez_food_driver/core/services/url_helper.dart';
 import 'package:breez_food_driver/core/style/app_theme.dart';
-import 'package:breez_food_driver/core/widgets/language_dialog.dart';
 import 'package:breez_food_driver/core/widgets/logout_dialog.dart';
 import 'package:breez_food_driver/features/auth/data/repo/auth_repository.dart';
 import 'package:breez_food_driver/features/auth/presentation/cubit/auth_flow_cubit.dart';
 import 'package:breez_food_driver/features/auth/presentation/ui/login_page.dart';
-import 'package:breez_food_driver/features/earnings/presentation/cubit/earnings_cubit.dart';
+import 'package:breez_food_driver/features/earnings/data/repo/earnings_repo.dart';
 import 'package:breez_food_driver/features/earnings/presentation/ui/earning_main_screen.dart';
 import 'package:breez_food_driver/features/help_center/presentation/ui/help_center.dart';
 import 'package:breez_food_driver/features/help_center/presentation/cubit/help_center_cubit.dart';
@@ -117,9 +116,8 @@ class CustomDrawer extends StatelessWidget {
                   onTap: () {
                     Navigator.of(context).push(
                       MaterialPageRoute(
-                        builder: (_) => BlocProvider(
-                          create: (context) => getIt<EarningsCubit>(),
-                          child: EarningMainScreen(),
+                        builder: (_) => EarningsMainScreen(
+                          repository: getIt<EarningsRepository>(),
                         ),
                       ),
                     );

@@ -46,6 +46,17 @@ class _HomeMapScreenState extends State<HomeMapScreen>
     with WidgetsBindingObserver {
   // -------------------- Audio
   bool _realtimeConnected = false;
+  void _handleRealtimeConnectionChanged(bool connected) {
+    if (!mounted) return;
+    if (_realtimeConnected == connected) return;
+
+    setState(() {
+      _realtimeConnected = connected;
+    });
+
+    _log("PUSHER CONNECTED? => $connected");
+  }
+
   DriverLocationCubit? _locationCubit;
   DriverStatusCubit? _driverStatusCubit;
   OfferCubit? _offerCubit;
@@ -57,6 +68,27 @@ class _HomeMapScreenState extends State<HomeMapScreen>
     _driverStatusCubit ??= context.read<DriverStatusCubit>();
     _offerCubit ??= context.read<OfferCubit>();
     _orderStatusCubit ??= context.read<OrderStatusCubit>();
+
+    // Refresh location when returning to this screen
+    _refreshCurrentLocation();
+  }
+
+  // Refresh current location when screen becomes active
+  Future<void> _refreshCurrentLocation() async {
+    try {
+      final position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      if (position != null && mounted) {
+        final latLng = LatLng(position.latitude, position.longitude);
+        _myLatLng = latLng;
+        context.read<DriverLocationCubit>().setLatest(latLng);
+        setState(() {});
+        _log("📍 Location refreshed: $latLng");
+      }
+    } catch (e) {
+      _log("❌ Failed to refresh location: $e");
+    }
   }
 
   StreamSubscription<InternetStatus>? _internetSub;
@@ -79,11 +111,9 @@ class _HomeMapScreenState extends State<HomeMapScreen>
       setState(() => _hasInternet = ok);
       _log("INTERNET => ${ok ? "CONNECTED" : "DISCONNECTED"}");
 
-      if (ok) {
-        // جرّب ترجع الاتصال
+      if (ok && _isOnline) {
         try {
-          await _realtime.start(connectIfOnline: _isOnline);
-          await _realtime.setOnline(_isOnline);
+          await _realtime.setOnline(true);
           _log("REALTIME => reconnect requested (online=$_isOnline)");
         } catch (e) {
           _log("REALTIME => reconnect failed: $e");
@@ -223,7 +253,7 @@ class _HomeMapScreenState extends State<HomeMapScreen>
     }
   }
 
-  // -------------------- Lifecycle                                          
+  // -------------------- Lifecycle
   @override
   void initState() {
     super.initState();
@@ -243,20 +273,10 @@ class _HomeMapScreenState extends State<HomeMapScreen>
         if (!mounted) return;
 
         context.read<OfferCubit>().onOfferReceived(offer);
-
-        try {
-          final map = (offer as Map).cast<String, dynamic>();
-          _onOfferArrived(map);
-        } catch (e) {
-          _log("offer cast failed: $e");
-        }
+        _log("OFFER FORWARDED TO CUBIT => ${offer.keys.toList()}");
       },
       onLog: (m) => _log(m),
-      onConnectionChanged: (connected) {
-        if (!mounted) return;
-        _log("PUSHER CONNECTED? => $connected");
-        setState(() => _realtimeConnected = connected);
-      },
+      onConnectionChanged: _handleRealtimeConnectionChanged,
     );
 
     _bootstrap();
@@ -305,8 +325,10 @@ class _HomeMapScreenState extends State<HomeMapScreen>
     );
 
     setState(() {
-      _isOnline = !manualOffline;
-      _driverStatus = _isOnline ? DriverStatus.searching : DriverStatus.offline;
+      // _isOnline = !manualOffline;
+      // _driverStatus = _isOnline ? DriverStatus.searching : DriverStatus.offline;
+      _isOnline = false;
+      _driverStatus = DriverStatus.offline;
     });
 
     await _realtime.start(connectIfOnline: _isOnline);
@@ -735,6 +757,31 @@ class _HomeMapScreenState extends State<HomeMapScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Get order status to determine which markers to show
+    String getOrderStatus() {
+      if (_currentOffer == null) return "";
+      final order =
+          (_currentOffer!['order'] as Map?)?.cast<String, dynamic>() ?? {};
+      return (order['status'] ?? order['order_status'] ?? order['state'] ?? "")
+          .toString()
+          .trim()
+          .toLowerCase();
+    }
+
+    final orderStatus = getOrderStatus();
+    final isInWay =
+        orderStatus == "inway" ||
+        orderStatus == "on_the_way" ||
+        orderStatus == "onway";
+    final isPreparing =
+        orderStatus == "preparing" ||
+        orderStatus == "in_progress" ||
+        orderStatus == "inprogress";
+
+    // Show restaurant before pickup, customer after pickup
+    final showCustomer = isInWay;
+    final showRestaurant = !isInWay && (_showOfferSheet || isPreparing);
+
     final markers = <Marker>{
       if (_myLatLng != null)
         Marker(
@@ -746,7 +793,8 @@ class _HomeMapScreenState extends State<HomeMapScreen>
           anchor: const Offset(0.5, 0.5),
           zIndex: 999,
         ),
-      if (_offerPickup != null)
+      // Show restaurant marker before pickup
+      if (showRestaurant && _offerPickup != null)
         Marker(
           markerId: const MarkerId("pickup"),
           position: _offerPickup!,
@@ -761,7 +809,8 @@ class _HomeMapScreenState extends State<HomeMapScreen>
           ),
           zIndex: 10,
         ),
-      if (_offerDropoff != null)
+      // Show customer marker after pickup
+      if (showCustomer && _offerDropoff != null)
         Marker(
           markerId: const MarkerId("dropoff"),
           position: _offerDropoff!,
@@ -799,7 +848,7 @@ class _HomeMapScreenState extends State<HomeMapScreen>
                 onToggleOnline: _toggleOnline,
                 onTestSound: startOfferSound,
                 isConnected: _hasInternet,
-                isSearching: _realtimeConnected,
+                isSearching: _isOnline && _realtimeConnected,
               ),
 
               Positioned(

@@ -87,10 +87,7 @@ flutter:
     - assets/avatars/
     - assets/video/splachscreen.mp4
     - assets/translations/
-    - assets/b_driver/onboarding.png
-    - assets/b_driver/customer_map_point.png
-    - assets/b_driver/driver_map_point.png
-    - assets/b_driver/resturant_map_point.png
+    - assets/b_driver/
     - assets/sounds/
     - assets/sounds/offer_ringtone.mp3
 

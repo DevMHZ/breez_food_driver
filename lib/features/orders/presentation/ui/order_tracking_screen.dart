@@ -1,4 +1,5 @@
 import 'dart:async';
+
 import 'package:breez_food_driver/core/di/di.dart';
 import 'package:breez_food_driver/core/services/map_marker_icon.dart';
 import 'package:breez_food_driver/core/services/shared_perfrences_key.dart';
@@ -38,7 +39,6 @@ class OrderTrackingScreen extends StatefulWidget {
 
 class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     with TrackingHelpers {
-  // ✅ Phones (no sheet)
   List<String> restaurantPhones() {
     final r = restaurantMap();
     final p1 = (r['phone'] ?? '').toString().trim();
@@ -59,19 +59,32 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     return s;
   }
 
+  bool _statusIsPreparing(String s) {
+    return s == "preparing" || s == "in_progress" || s == "inprogress";
+  }
+
+  bool _statusIsInWay(String s) {
+    return s == "inway" || s == "on_the_way" || s == "onway";
+  }
+
+  bool _statusIsDelivered(String s) {
+    return s == "delivered";
+  }
+
+  void _applyFlagsFromStatus(String s) {
+    final isPreparing = _statusIsPreparing(s);
+    final isInWay = _statusIsInWay(s);
+    final isDelivered = _statusIsDelivered(s);
+
+    sentToKitchen = isPreparing || isInWay || isDelivered;
+    inWay = isInWay || isDelivered;
+    delivered = isDelivered;
+  }
+
   void _syncFlagsFromStatus() {
     final s = _orderStatus();
-
-    final isPreparing =
-        s == "preparing" || s == "in_progress" || s == "inprogress";
-    final isInWay = s == "inway" || s == "on_the_way" || s == "onway";
-    final isDelivered = s == "delivered";
-
     setState(() {
-      // إذا صار preparing أو أكثر => يعني انبعت للمطبخ
-      sentToKitchen = isPreparing || isInWay || isDelivered;
-      inWay = isInWay || isDelivered;
-      delivered = isDelivered;
+      _applyFlagsFromStatus(s);
     });
   }
 
@@ -92,12 +105,11 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
 
   BitmapDescriptor? customerIcon;
   BitmapDescriptor? restaurantIcon;
-
+  BitmapDescriptor? driverIcon;
   bool detailsLoading = false;
   Map<String, dynamic>? details;
   String? detailsError;
 
-  // ✅ location stream
   StreamSubscription<Position>? _posSub;
   bool _locationStarted = false;
 
@@ -107,38 +119,44 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   );
 
   void _log(String msg) {
-    // ignore: avoid_print
     print("🟩[TRACKING ${widget.orderId}] $msg");
   }
 
-  // ===================== PRIMARY BUTTON =====================
-
   String _primaryBtnText() {
     final s = _orderStatus();
-    if (s == "delivered")
+
+    if (_statusIsDelivered(s)) {
       return trSafe("tracking.delivered", fallback: "تم التسليم");
-    if (s == "inway")
+    }
+    if (_statusIsInWay(s)) {
       return trSafe("tracking.mark_delivered", fallback: "تأكيد التسليم");
-    if (s == "preparing")
+    }
+    if (_statusIsPreparing(s)) {
       return trSafe("tracking.start_inway", fallback: "ابدأ الطريق");
+    }
     return trSafe("tracking.send_to_kitchen", fallback: "إرسال للمطبخ");
   }
 
   String statusText() {
     final s = _orderStatus();
-    if (s == "delivered")
+
+    if (_statusIsDelivered(s)) {
       return trSafe("tracking.status_delivered", fallback: "تم التسليم");
-    if (s == "inway")
+    }
+    if (_statusIsInWay(s)) {
       return trSafe("tracking.status_on_the_way", fallback: "بالطريق");
-    if (s == "preparing")
+    }
+    if (_statusIsPreparing(s)) {
       return trSafe("tracking.status_preparing", fallback: "قيد التحضير");
+    }
     return trSafe("tracking.status_accepted", fallback: "مقبول");
   }
 
   bool get _primaryBtnEnabled {
+    final s = _orderStatus();
     if (detailsLoading) return false;
     if (primaryLoading) return false;
-    if (delivered) return false;
+    if (_statusIsDelivered(s)) return false;
     return true;
   }
 
@@ -146,20 +164,31 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     if (!_primaryBtnEnabled) return;
 
     if (!sentToKitchen) {
+      if (!restaurantCalled) {
+        showFancyToast(
+          context,
+          success: false,
+          title: trSafe("toast.error_title", fallback: "تنبيه"),
+          message: trSafe(
+            "tracking.call_required_before_start",
+            fallback: "لازم تتصل بالمطعم قبل ما تبدأ الطريق",
+          ),
+        );
+        return;
+      }
+
       setState(() => primaryLoading = true);
       try {
         final ok = await context.read<OrderStatusCubit>().sendOrderToKitchen(
           widget.orderId,
         );
-        setState(() => sentToKitchen = true);
-        await _loadOrderDetails(); // رح يعمل sync كمان
+
+        await _loadOrderDetails();
 
         if (!mounted) return;
-
         setState(() => primaryLoading = false);
-        if (!ok) return;
 
-        setState(() => sentToKitchen = true);
+        if (!ok) return;
 
         showFancyToast(
           context,
@@ -191,8 +220,6 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     await markDelivered();
   }
 
-  // ===================== EXIT (CLEAR CACHE) =====================
-
   Future<void> _exitAndClearCache() async {
     try {
       await AuthStorageHelper.clearActiveOrder();
@@ -205,19 +232,18 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     } catch (_) {}
 
     if (!mounted) return;
-    Navigator.of(context).pop(false); // false = not delivered
+    Navigator.of(context).pop(false);
   }
-
-  // ===================== LIFECYCLE =====================
 
   @override
   void initState() {
     super.initState();
+    _applyFlagsFromStatus(_orderStatus());
     _loadMarkerIcons();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _loadOrderDetails();
-      await fitToPickupDropoff();
+      await fitCameraByStatus();
       await _startLocationSending();
     });
   }
@@ -228,8 +254,6 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     _panelCtrl.dispose();
     super.dispose();
   }
-
-  // ===================== LOCATION =====================
 
   Future<void> _startLocationSending() async {
     if (_locationStarted) return;
@@ -335,8 +359,6 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     return true;
   }
 
-  // ===================== MARKERS + DETAILS =====================
-
   Future<void> _loadMarkerIcons() async {
     try {
       customerIcon = await MapMarkerIcon.fromAsset(
@@ -345,6 +367,10 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
       );
       restaurantIcon = await MapMarkerIcon.fromAsset(
         "assets/b_driver/resturant_map_point.png",
+        width: 120,
+      );
+      driverIcon = await MapMarkerIcon.fromAsset(
+        "assets/b_driver/driver_map_point.png",
         width: 120,
       );
       if (mounted) setState(() {});
@@ -364,6 +390,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     try {
       final repo = getIt<OrdersRepository>();
       final res = await repo.orderDetailsToDriver(widget.orderId);
+
       if (!mounted) return;
 
       if (!res.isOk) {
@@ -387,14 +414,9 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
       if (raw == null || raw is! Map) {
         setState(() {
           detailsLoading = false;
-          details = raw.cast<String, dynamic>();
+          detailsError = "common.failed";
+          details = null;
         });
-
-        // ✅ مهم جداً: بعد ما خزّنت details
-        _syncFlagsFromStatus();
-
-        // (اختياري) إذا بدك تحديث النص/الخريطة مباشرة
-        await fitToPickupDropoff();
 
         showFancyToast(
           context,
@@ -407,8 +429,12 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
 
       setState(() {
         detailsLoading = false;
+        detailsError = null;
         details = raw.cast<String, dynamic>();
       });
+
+      _syncFlagsFromStatus();
+      await fitCameraByStatus();
     } catch (e) {
       _log("Details exception: $e");
       if (!mounted) return;
@@ -427,8 +453,6 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
       );
     }
   }
-
-  // ===================== maps from details =====================
 
   Map<String, dynamic> orderMap() {
     final o = (details?['order'] as Map?)?.cast<String, dynamic>();
@@ -513,31 +537,30 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     return LatLng(lat, lng);
   }
 
-  Future<void> fitToPickupDropoff() async {
-    final p = pickupLatLng();
-    final d = dropoffLatLng();
-    if (p == null || d == null || !_controller.isCompleted) return;
+  Future<void> fitCameraByStatus() async {
+    if (!_controller.isCompleted) return;
 
-    final c = await _controller.future;
+    final status = _orderStatus();
+    final pickup = pickupLatLng();
+    final dropoff = dropoffLatLng();
 
-    final southWest = LatLng(
-      (p.latitude < d.latitude) ? p.latitude : d.latitude,
-      (p.longitude < d.longitude) ? p.longitude : d.longitude,
-    );
-    final northEast = LatLng(
-      (p.latitude > d.latitude) ? p.latitude : d.latitude,
-      (p.longitude > d.longitude) ? p.longitude : d.longitude,
-    );
+    LatLng? target;
 
-    await c.animateCamera(
-      CameraUpdate.newLatLngBounds(
-        LatLngBounds(southwest: southWest, northeast: northEast),
-        90,
-      ),
+    if (!_statusIsInWay(status) && !_statusIsDelivered(status)) {
+      target = pickup;
+    }
+
+    if (_statusIsInWay(status) || _statusIsDelivered(status)) {
+      target = dropoff;
+    }
+
+    if (target == null) return;
+
+    final controller = await _controller.future;
+    await controller.animateCamera(
+      CameraUpdate.newCameraPosition(CameraPosition(target: target, zoom: 16)),
     );
   }
-
-  // ===================== actions =====================
 
   Future<void> openNavigationTo(LatLng? target) async {
     if (target == null) return;
@@ -623,28 +646,16 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   }
 
   Future<void> startInWay() async {
-    if (!restaurantCalled) {
-      showFancyToast(
-        context,
-        success: false,
-        title: trSafe("toast.error_title", fallback: "تنبيه"),
-        message: trSafe(
-          "tracking.call_required_before_start",
-          fallback: "لازم تتصل بالمطعم قبل ما تبدأ الطريق",
-        ),
-      );
-      return;
-    }
-
     final ok = await context.read<OrderStatusCubit>().changeToInWay(
       widget.orderId,
     );
     if (!ok) return;
-    await _loadOrderDetails(); // هون رح يجيب status=inway ويحدّث UI
-    if (!mounted) return;
-    setState(() => inWay = true);
+
     await _loadOrderDetails();
-    _panelCtrl.animateTo(
+    if (!mounted) return;
+
+    await fitCameraByStatus();
+    await _panelCtrl.animateTo(
       _midSheet,
       duration: const Duration(milliseconds: 220),
       curve: Curves.easeOut,
@@ -682,7 +693,6 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // دائرة النجاح
                 Container(
                   width: 74,
                   height: 74,
@@ -706,18 +716,14 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 14),
-
                 Image.asset(
                   "assets/images/breeze-food2.png",
                   width: 70,
                   height: 70,
                   fit: BoxFit.contain,
                 ),
-
                 const SizedBox(height: 12),
-
                 const Text(
                   "تم التسليم بنجاح",
                   textAlign: TextAlign.center,
@@ -727,9 +733,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                     fontWeight: FontWeight.w900,
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 Text(
                   "تم تأكيد تسليم الطلب بنجاح ✅",
                   textAlign: TextAlign.center,
@@ -741,9 +745,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                     height: 1.4,
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(
@@ -777,9 +779,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 18),
-
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -863,10 +863,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
       context.read<OrderStatusCubit>().reset();
     } catch (_) {}
 
-    Navigator.of(context).pop(true); // true = delivered
+    Navigator.of(context).pop(true);
   }
-
-  // ===================== build =====================
 
   @override
   Widget build(BuildContext context) {
@@ -874,32 +872,58 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     final dropoff = dropoffLatLng();
     final phones = restaurantPhones();
 
-    final markers = <Marker>{
-      if (pickup != null)
+    final status = _orderStatus();
+    final isInWayStatus = _statusIsInWay(status);
+    final isDeliveredStatus = _statusIsDelivered(status);
+
+    final markers = <Marker>{};
+    final driver = context.watch<DriverLocationCubit>().latest;
+
+    if (driver != null) {
+      markers.add(
         Marker(
-          markerId: const MarkerId("pickup"),
-          position: pickup,
+          markerId: const MarkerId("driver"),
+          position: driver,
           icon:
-              restaurantIcon ??
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          anchor: const Offset(0.5, 1.0),
-          infoWindow: InfoWindow(
-            title: trSafe("tracking.pickup", fallback: "Pickup"),
-          ),
+              driverIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+          anchor: const Offset(0.5, 0.5),
+          infoWindow: const InfoWindow(title: "Driver"),
         ),
-      if (dropoff != null)
-        Marker(
-          markerId: const MarkerId("dropoff"),
-          position: dropoff,
-          icon:
-              customerIcon ??
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-          anchor: const Offset(0.5, 1.0),
-          infoWindow: InfoWindow(
-            title: trSafe("tracking.dropoff", fallback: "Dropoff"),
+      );
+    }
+
+    if (!isInWayStatus && !isDeliveredStatus) {
+      if (pickup != null) {
+        markers.add(
+          Marker(
+            markerId: const MarkerId("pickup"),
+            position: pickup,
+            icon:
+                restaurantIcon ??
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+            anchor: const Offset(0.5, 1.0),
           ),
-        ),
-    };
+        );
+      }
+    }
+
+    if (isInWayStatus || isDeliveredStatus) {
+      if (dropoff != null) {
+        markers.add(
+          Marker(
+            markerId: const MarkerId("dropoff"),
+            position: dropoff,
+            icon:
+                customerIcon ??
+                BitmapDescriptor.defaultMarkerWithHue(
+                  BitmapDescriptor.hueGreen,
+                ),
+            anchor: const Offset(0.5, 1.0),
+          ),
+        );
+      }
+    }
 
     return BlocListener<OrderStatusCubit, OrderStatusState>(
       listener: (context, state) {
@@ -944,10 +968,9 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                 markers: markers,
                 onCreated: () async {
                   await Future.delayed(const Duration(milliseconds: 200));
-                  if (mounted) await fitToPickupDropoff();
+                  if (mounted) await fitCameraByStatus();
                 },
               ),
-
               Positioned(
                 top: MediaQuery.of(context).padding.top + 10,
                 left: 10,
@@ -957,7 +980,6 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                   onClose: _exitAndClearCache,
                 ),
               ),
-
               Positioned(
                 left: 0,
                 right: 0,
@@ -999,9 +1021,10 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                 ),
                               ),
                             ),
-
                             SliverToBoxAdapter(
                               child: TrackingPrettyPanel(
+                                showOrderSection:
+                                    !(isInWayStatus || isDeliveredStatus),
                                 restaurantPhones: phones,
                                 onCallRestaurant1: phones.isNotEmpty
                                     ? () => _callRestaurantAt(0)
@@ -1011,7 +1034,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                     : null,
                                 customer: (details?['customer'] as Map?)
                                     ?.cast<String, dynamic>(),
-                                showCustomerInfo: inWay,
+                                showCustomerInfo:
+                                    isInWayStatus || isDeliveredStatus,
                                 orderId: widget.orderId,
                                 statusText: statusText(),
                                 restaurantCalled: restaurantCalled,
@@ -1032,7 +1056,6 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                 onEmergencyPressed: sendEmergency,
                               ),
                             ),
-
                             const SliverToBoxAdapter(
                               child: SizedBox(height: 10),
                             ),

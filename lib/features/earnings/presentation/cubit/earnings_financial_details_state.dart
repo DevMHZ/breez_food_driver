@@ -1,28 +1,28 @@
 import 'package:breez_food_driver/features/earnings/data/models/earnings_models.dart';
 
-class EarningsState {
+class EarningsFinancialDetailsState {
   final bool isLoading;
   final String errorMessage;
-  final EarningsOverviewData? data;
+  final EarningsFinancialDetailsData? data;
 
-  const EarningsState({
+  const EarningsFinancialDetailsState({
     required this.isLoading,
     required this.errorMessage,
     required this.data,
   });
 
-  const EarningsState.initial()
+  const EarningsFinancialDetailsState.initial()
       : isLoading = false,
         errorMessage = '',
         data = null;
 
-  EarningsState copyWith({
+  EarningsFinancialDetailsState copyWith({
     bool? isLoading,
     String? errorMessage,
-    EarningsOverviewData? data,
+    EarningsFinancialDetailsData? data,
     bool clearError = false,
   }) {
-    return EarningsState(
+    return EarningsFinancialDetailsState(
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? '' : (errorMessage ?? this.errorMessage),
       data: data ?? this.data,

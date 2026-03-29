@@ -11,7 +11,7 @@ import 'appetizer_card.dart';
 
 class TrackingPrettyPanel extends StatelessWidget {
   final bool showCustomerInfo;
-
+  final bool showOrderSection;
   final int orderId;
   final String statusText;
 
@@ -73,6 +73,7 @@ class TrackingPrettyPanel extends StatelessWidget {
     required this.onPrimaryPressed,
     required this.onEmergencyPressed,
     this.customer,
+    required this.showOrderSection,
   });
 
   // ---------------- helpers ----------------
@@ -168,7 +169,7 @@ class TrackingPrettyPanel extends StatelessWidget {
     final fee = _toDouble(feeAny);
     final itemsTotal = _toDouble(itemsAny);
 
-    final restaurantName = _v(restaurant['name'], empty: "المطعم:");
+    final restaurantName = _v(restaurant['name'], empty: "المطعم");
 
     // Notes
     final itemsNotes = _itemsNotesText();
@@ -192,11 +193,21 @@ class TrackingPrettyPanel extends StatelessWidget {
         ? "الزبون"
         : ("$first $last").trim();
     final customerPhone = _v(c['phone'], empty: "—").trim();
-    final canShowCustomerSection = showCustomerInfo && c.isNotEmpty;
+    final hasUsefulCustomerData =
+        customerName != "الزبون" || !_isEmptyText(customerPhone);
+    final canShowCustomerSection =
+        showCustomerInfo && c.isNotEmpty && hasUsefulCustomerData;
 
     // Restaurant phones (max 2)
     final p1 = restaurantPhones.isNotEmpty ? restaurantPhones[0] : "";
     final p2 = restaurantPhones.length > 1 ? restaurantPhones[1] : "";
+
+    final isInWayMode = !showOrderSection;
+    final hasCustomerLocation = dropoff != null;
+
+    final hasVisibleNotes = isInWayMode
+        ? !_isEmptyText(addressNote)
+        : hasAnyNotes;
 
     // ✅ bigger to avoid content hidden behind bottom bar
     const bottomBarH = 92.0;
@@ -279,7 +290,7 @@ class TrackingPrettyPanel extends StatelessWidget {
                                 ),
                                 const SizedBox(width: 6),
                                 Text(
-                                  "الأتصال",
+                                  "الاتصال",
                                   style: TextStyle(
                                     color: Colors.white.withOpacity(.9),
                                     fontWeight: FontWeight.w900,
@@ -311,53 +322,63 @@ class TrackingPrettyPanel extends StatelessWidget {
                       _gap(10),
                     ],
 
-                    // ===== ORDER =====
-                    ExpandedSection(
-                      title: "الطلب",
-                      child: Column(
-                        children: [
-                          if (hasItems)
-                            ExpansionCard(
-                              title: "العناصر",
-                              icon: Icons.receipt_long_outlined,
-                              count: items.length,
-                              initiallyExpanded: true,
-                              child: Column(
-                                children: items
-                                    .map((it) => ItemCard(item: it))
-                                    .toList(),
-                              ),
-                            )
-                          else
-                            _emptyHint("ليس هناك عناصر"),
-
-                          if (hasAppetizers) ...[
-                            _gap(10),
-                            ExpansionCard(
-                              title: "المقبلات",
-                              icon: Icons.local_dining_outlined,
-                              count: appetizers.length,
-                              initiallyExpanded: false,
-                              child: Column(
-                                children: appetizers
-                                    .map((it) => AppetizerCard(item: it))
-                                    .toList(),
-                              ),
-                            ),
-                          ],
-                        ],
+                    if (isInWayMode && hasCustomerLocation) ...[
+                      ExpandedSection(
+                        title: "موقع الزبون",
+                        child: CustomerDestinationCard(
+                          onNavigate: () => onNavigateTo(dropoff),
+                        ),
                       ),
-                    ),
+                      _gap(10),
+                    ],
 
-                    _gap(10),
+                    // ===== ORDER =====
+                    if (!isInWayMode) ...[
+                      ExpandedSection(
+                        title: "",
+                        child: Column(
+                          children: [
+                            if (hasItems)
+                              ExpansionCard(
+                                title: "العناصر",
+                                icon: Icons.receipt_long_outlined,
+                                count: items.length,
+                                initiallyExpanded: true,
+                                child: Column(
+                                  children: items
+                                      .map((it) => ItemCard(item: it))
+                                      .toList(),
+                                ),
+                              )
+                            else
+                              _emptyHint("ليس هناك عناصر"),
+                            if (hasAppetizers) ...[
+                              _gap(10),
+                              ExpansionCard(
+                                title: "المقبلات",
+                                icon: Icons.local_dining_outlined,
+                                count: appetizers.length,
+                                initiallyExpanded: false,
+                                child: Column(
+                                  children: appetizers
+                                      .map((it) => AppetizerCard(item: it))
+                                      .toList(),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      _gap(10),
+                    ],
 
-                    // ===== NOTES (meal -> order -> address) =====
-                    if (hasAnyNotes) ...[
+                    // ===== NOTES =====
+                    if (hasVisibleNotes) ...[
                       ExpandedSection(
                         title: "الملاحظات",
                         child: NotesCompact(
-                          itemsNotes: itemsNotes,
-                          orderNote: orderNote,
+                          itemsNotes: isInWayMode ? "" : itemsNotes,
+                          orderNote: isInWayMode ? "" : orderNote,
                           addressNote: addressNote,
                         ),
                       ),
@@ -365,7 +386,8 @@ class TrackingPrettyPanel extends StatelessWidget {
                     ],
 
                     // ===== PRICES =====
-                    if (!_isZeroish(total) || !_isZeroish(fee)) ...[
+                    if (!isInWayMode &&
+                        (!_isZeroish(total) || !_isZeroish(fee))) ...[
                       ExpandedSection(
                         title: "المجموع",
                         child: Column(
@@ -420,9 +442,9 @@ class TrackingPrettyPanel extends StatelessWidget {
                       ),
                     ],
 
-                    if (detailsError != null) ...[
+                    if ((detailsError ?? '').trim().isNotEmpty) ...[
                       _gap(10),
-                      ErrorBox(text: detailsError!, onRetry: onRetry),
+                      ErrorBox(text: detailsError!.trim(), onRetry: onRetry),
                     ],
 
                     _gap(10),
@@ -514,10 +536,9 @@ class _BottomActionBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Primary button (big)
           Expanded(
             child: ElevatedButton(
-              onPressed: primaryEnabled ? onPrimary : null,
+              onPressed: (primaryEnabled && !primaryLoading) ? onPrimary : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 disabledBackgroundColor: Colors.white12,
@@ -552,10 +573,7 @@ class _BottomActionBar extends StatelessWidget {
               ),
             ),
           ),
-
           const SizedBox(width: 10),
-
-          // Call 1 / 2 (ALWAYS allowed, even after send)
           if (has1) ...[
             _miniActionBtn(
               icon: Icons.call_rounded,
@@ -572,8 +590,6 @@ class _BottomActionBar extends StatelessWidget {
             ),
             const SizedBox(width: 8),
           ],
-
-          // Emergency
           _miniActionBtn(
             icon: Icons.warning_amber_rounded,
             label: "",
@@ -755,6 +771,79 @@ class CustomerCard extends StatelessWidget {
                 Icons.call,
                 color: hasPhone ? Colors.white : Colors.white38,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class CustomerDestinationCard extends StatelessWidget {
+  final VoidCallback onNavigate;
+
+  const CustomerDestinationCard({super.key, required this.onNavigate});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.08)),
+            ),
+            child: const Icon(Icons.location_on_rounded, color: Colors.white),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "موقع الزبون",
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "اضغط للتوجّه مباشرة إلى عنوان التسليم",
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.75),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          InkWell(
+            onTap: onNavigate,
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withOpacity(0.18),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.white.withOpacity(0.10)),
+              ),
+              child: const Icon(Icons.navigation_rounded, color: Colors.white),
             ),
           ),
         ],

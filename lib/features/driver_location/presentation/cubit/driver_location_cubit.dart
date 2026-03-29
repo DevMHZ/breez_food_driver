@@ -12,7 +12,7 @@ class DriverLocationCubit extends Cubit<DriverLocationState> {
   Timer? _timer;
   LatLng? _latest;
   bool _online = false;
-
+  LatLng? get latest => _latest;
   DateTime _lastSent = DateTime.fromMillisecondsSinceEpoch(0);
 
   /// خزّن آخر موقع إجانا من الستريم
