@@ -322,16 +322,6 @@ class TrackingPrettyPanel extends StatelessWidget {
                       _gap(10),
                     ],
 
-                    if (isInWayMode && hasCustomerLocation) ...[
-                      ExpandedSection(
-                        title: "موقع الزبون",
-                        child: CustomerDestinationCard(
-                          onNavigate: () => onNavigateTo(dropoff),
-                        ),
-                      ),
-                      _gap(10),
-                    ],
-
                     // ===== ORDER =====
                     if (!isInWayMode) ...[
                       ExpandedSection(
@@ -771,79 +761,6 @@ class CustomerCard extends StatelessWidget {
                 Icons.call,
                 color: hasPhone ? Colors.white : Colors.white38,
               ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class CustomerDestinationCard extends StatelessWidget {
-  final VoidCallback onNavigate;
-
-  const CustomerDestinationCard({super.key, required this.onNavigate});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.08)),
-            ),
-            child: const Icon(Icons.location_on_rounded, color: Colors.white),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "موقع الزبون",
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  "اضغط للتوجّه مباشرة إلى عنوان التسليم",
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.75),
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 10),
-          InkWell(
-            onTap: onNavigate,
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.18),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withOpacity(0.10)),
-              ),
-              child: const Icon(Icons.navigation_rounded, color: Colors.white),
             ),
           ),
         ],

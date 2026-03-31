@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:retrofit/retrofit.dart';
 import 'package:breez_food_driver/core/network/api_result.dart';
 import '../api/orders_api_service.dart';
 
@@ -6,10 +7,29 @@ class OrdersRepository {
   final OrdersApiService api;
   OrdersRepository(this.api);
 
+  AppResponse _mapSuccess(HttpResponse<dynamic> res, {String? fallbackMessage}) {
+    final raw = res.data;
+
+    if (raw is Map<String, dynamic>) {
+      return AppResponse.ok(
+        data: raw['data'] ?? raw,
+        message: (raw['message'] ?? fallbackMessage)?.toString(),
+      );
+    }
+
+    return AppResponse.ok(
+      data: raw,
+      message: fallbackMessage,
+    );
+  }
+
   Future<AppResponse> sendOrderToKitchen(int orderId) async {
     try {
       final res = await api.sendOrderToKitchen({"order_id": orderId});
-      return AppResponse.ok(data: res.data);
+      return _mapSuccess(
+        res,
+        fallbackMessage: "تم إرسال الطلب إلى المطبخ",
+      );
     } on DioException catch (e) {
       return AppResponseHandler.handleError(e);
     } catch (_) {
@@ -20,7 +40,10 @@ class OrdersRepository {
   Future<AppResponse> changeToInWay(int orderId) async {
     try {
       final res = await api.changeToInWay({"order_id": orderId});
-      return AppResponse.ok(data: res.data);
+      return _mapSuccess(
+        res,
+        fallbackMessage: "تم تغيير الحالة إلى بالطريق",
+      );
     } on DioException catch (e) {
       return AppResponseHandler.handleError(e);
     } catch (_) {
@@ -31,7 +54,7 @@ class OrdersRepository {
   Future<AppResponse> orderDetailsToDriver(int orderId) async {
     try {
       final res = await api.orderDetailsToDriver({"id": orderId});
-      return AppResponse.ok(data: res.data);
+      return _mapSuccess(res);
     } on DioException catch (e) {
       return AppResponseHandler.handleError(e);
     } catch (_) {
@@ -48,7 +71,10 @@ class OrdersRepository {
         "order_id": orderId,
         "code": code,
       });
-      return AppResponse.ok(data: res.data);
+      return _mapSuccess(
+        res,
+        fallbackMessage: "تم تغيير الحالة إلى تم التسليم",
+      );
     } on DioException catch (e) {
       return AppResponseHandler.handleError(e);
     } catch (_) {
@@ -56,7 +82,6 @@ class OrdersRepository {
     }
   }
 
-  // ✅ NEW
   Future<AppResponse> emergency({
     required int orderId,
     required String reason,
@@ -66,7 +91,10 @@ class OrdersRepository {
         "order_id": orderId,
         "reason": reason,
       });
-      return AppResponse.ok(data: res.data);
+      return _mapSuccess(
+        res,
+        fallbackMessage: "تم إرسال البلاغ",
+      );
     } on DioException catch (e) {
       return AppResponseHandler.handleError(e);
     } catch (_) {

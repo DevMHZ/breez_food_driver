@@ -324,15 +324,20 @@ class _HomeMapScreenState extends State<HomeMapScreen>
       "BOOTSTRAP => driverId=$driverId tokenLen=${token?.length ?? 0} manualOffline=$manualOffline",
     );
 
+    final initialOnline = !manualOffline;
+
     setState(() {
-      // _isOnline = !manualOffline;
-      // _driverStatus = _isOnline ? DriverStatus.searching : DriverStatus.offline;
-      _isOnline = false;
-      _driverStatus = DriverStatus.offline;
+      _isOnline = initialOnline;
+      _driverStatus = _isOnline ? DriverStatus.searching : DriverStatus.offline;
     });
 
-    await _realtime.start(connectIfOnline: _isOnline);
-    await _realtime.setOnline(_isOnline);
+    await _realtime.start(connectIfOnline: initialOnline);
+    await _realtime.setOnline(initialOnline);
+
+    context.read<DriverLocationCubit>().setOnline(
+      initialOnline,
+      interval: kLocationSendInterval,
+    );
   }
 
   // -------------------- Local restore (NO SERVER CHECK)
@@ -383,23 +388,27 @@ class _HomeMapScreenState extends State<HomeMapScreen>
     if (_isChangingStatus) return;
     if (_driverStatus == DriverStatus.offerReceived) return;
 
+    final targetOnline = !_isOnline;
+
     setState(() => _isChangingStatus = true);
 
     final cubit = context.read<DriverStatusCubit>();
-    final newIsOnline = await cubit.toggle();
+    final newIsOnline = await cubit.setOnline(targetOnline, current: _isOnline);
 
     if (!mounted) return;
     setState(() => _isChangingStatus = false);
 
-    if (newIsOnline == null) {
-      _log("TOGGLE ERROR");
+    if (newIsOnline != targetOnline) {
+      _log("TOGGLE ERROR => expected=$targetOnline got=$newIsOnline");
       return;
     }
 
     await AuthStorageHelper.setFlag(
       AuthStorageHelper.manualOfflineKey,
-      newIsOnline == false,
+      newIsOnline!,
     );
+
+    if (!mounted) return;
 
     setState(() {
       _isOnline = newIsOnline;

@@ -79,6 +79,14 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     sentToKitchen = isPreparing || isInWay || isDelivered;
     inWay = isInWay || isDelivered;
     delivered = isDelivered;
+
+    _log(
+      "📦 applyFlagsFromStatus "
+      "status=$s "
+      "sentToKitchen=$sentToKitchen "
+      "inWay=$inWay "
+      "delivered=$delivered",
+    );
   }
 
   void _syncFlagsFromStatus() {
@@ -128,12 +136,22 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     if (_statusIsDelivered(s)) {
       return trSafe("tracking.delivered", fallback: "تم التسليم");
     }
+
     if (_statusIsInWay(s)) {
       return trSafe("tracking.mark_delivered", fallback: "تأكيد التسليم");
     }
+
     if (_statusIsPreparing(s)) {
       return trSafe("tracking.start_inway", fallback: "ابدأ الطريق");
     }
+
+    if (!restaurantCalled) {
+      return trSafe(
+        "tracking.call_and_send_to_kitchen",
+        fallback: "اتصل بالمطعم ثم أرسل",
+      );
+    }
+
     return trSafe("tracking.send_to_kitchen", fallback: "إرسال للمطبخ");
   }
 
@@ -163,52 +181,17 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   Future<void> _onPrimaryPressed() async {
     if (!_primaryBtnEnabled) return;
 
+    final s = _orderStatus();
+
+    if (_statusIsDelivered(s)) return;
+
     if (!sentToKitchen) {
       if (!restaurantCalled) {
-        showFancyToast(
-          context,
-          success: false,
-          title: trSafe("toast.error_title", fallback: "تنبيه"),
-          message: trSafe(
-            "tracking.call_required_before_start",
-            fallback: "لازم تتصل بالمطعم قبل ما تبدأ الطريق",
-          ),
-        );
+        await _startRestaurantContactFlow(autoSendAfterConfirmation: true);
         return;
       }
 
-      setState(() => primaryLoading = true);
-      try {
-        final ok = await context.read<OrderStatusCubit>().sendOrderToKitchen(
-          widget.orderId,
-        );
-
-        await _loadOrderDetails();
-
-        if (!mounted) return;
-        setState(() => primaryLoading = false);
-
-        if (!ok) return;
-
-        showFancyToast(
-          context,
-          success: true,
-          title: trSafe("toast.success_title", fallback: "نجاح"),
-          message: trSafe(
-            "tracking.sent_to_kitchen",
-            fallback: "تم إرسال الطلب إلى المطبخ",
-          ),
-        );
-      } catch (_) {
-        if (!mounted) return;
-        setState(() => primaryLoading = false);
-        showFancyToast(
-          context,
-          success: false,
-          title: trSafe("toast.error_title", fallback: "خطأ"),
-          message: trSafe("common.unexpected_error", fallback: "خطأ غير متوقع"),
-        );
-      }
+      await _sendToKitchenFlow();
       return;
     }
 
@@ -218,6 +201,354 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     }
 
     await markDelivered();
+  }
+
+  Future<void> _sendToKitchenFlow({
+    String source = "unknown",
+    bool force = false,
+  }) async {
+    _log(
+      "🍳 _sendToKitchenFlow ENTER "
+      "source=$source "
+      "force=$force "
+      "primaryLoading=$primaryLoading "
+      "sentToKitchen=$sentToKitchen "
+      "status=${_orderStatus()}",
+    );
+
+    if (primaryLoading) {
+      _log("🍳 ABORT => primaryLoading=true");
+      return;
+    }
+
+    if (sentToKitchen && !force) {
+      _log("🍳 ABORT => sentToKitchen=true");
+      return;
+    }
+
+    setState(() => primaryLoading = true);
+
+    try {
+      _log("🍳 calling cubit.sendOrderToKitchen(orderId=${widget.orderId})");
+
+      final ok = await context.read<OrderStatusCubit>().sendOrderToKitchen(
+        widget.orderId,
+      );
+
+      _log("🍳 cubit.sendOrderToKitchen returned => $ok");
+
+      if (!mounted) return;
+
+      if (!ok) return;
+
+      setState(() {
+        sentToKitchen = true;
+      });
+
+      await _loadOrderDetails();
+
+      if (!mounted) return;
+
+      await _panelCtrl.animateTo(
+        _midSheet,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => primaryLoading = false);
+      }
+      _log("🍳 _sendToKitchenFlow EXIT");
+    }
+  }
+
+  Future<void> _startRestaurantContactFlow({
+    int? forcedPhoneIndex,
+    bool autoSendAfterConfirmation = false,
+  }) async {
+    final phones = restaurantPhones();
+
+    _log(
+      "☎️ _startRestaurantContactFlow "
+      "phones=$phones "
+      "forcedPhoneIndex=$forcedPhoneIndex "
+      "autoSendAfterConfirmation=$autoSendAfterConfirmation",
+    );
+
+    if (phones.isEmpty) {
+      _log("☎️ no phones found");
+      showFancyToast(
+        success: false,
+        context,
+        message: trSafe(
+          "common.phone_missing",
+          fallback: "رقم الهاتف غير موجود",
+        ),
+      );
+      return;
+    }
+
+    int? selectedIndex = forcedPhoneIndex;
+
+    if (selectedIndex == null) {
+      if (phones.length == 1) {
+        selectedIndex = 0;
+      } else {
+        selectedIndex = await _showPhonePickerSheet(phones);
+      }
+    }
+
+    _log("☎️ selectedIndex => $selectedIndex");
+
+    if (selectedIndex == null) {
+      _log("☎️ user cancelled phone picker");
+      return;
+    }
+
+    if (selectedIndex < 0 || selectedIndex >= phones.length) {
+      _log("☎️ invalid phone index => $selectedIndex");
+      return;
+    }
+
+    final selectedPhone = phones[selectedIndex];
+    _log("☎️ launching dialer for => $selectedPhone");
+
+    final ok = await callNumber(selectedPhone);
+    _log("☎️ callNumber returned => $ok");
+
+    if (!ok || !mounted) return;
+
+    final confirmed = await _showRestaurantCallConfirmSheet(selectedPhone);
+    _log("☎️ confirm sheet returned => $confirmed");
+
+    if (!confirmed || !mounted) return;
+
+    if (!restaurantCalled) {
+      setState(() => restaurantCalled = true);
+      _log("☎️ restaurantCalled set to true");
+    }
+
+    showFancyToast(
+      success: true,
+      context,
+      message: trSafe(
+        "tracking.restaurant_called",
+        fallback: "تم تأكيد التواصل مع المطعم",
+      ),
+    );
+
+    if (autoSendAfterConfirmation) {
+      _log("☎️ auto send to kitchen triggered");
+      await _sendToKitchenFlow(source: "contact_confirm_yes", force: true);
+    } else {
+      _log(
+        "☎️ auto send skipped "
+        "autoSendAfterConfirmation=$autoSendAfterConfirmation "
+        "sentToKitchen=$sentToKitchen",
+      );
+    }
+  }
+
+  Future<int?> _showPhonePickerSheet(List<String> phones) {
+    return showModalBottomSheet<int>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 42,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  trSafe(
+                    "tracking.choose_restaurant_phone",
+                    fallback: "اختر رقم المطعم",
+                  ),
+                  style: const TextStyle(
+                    fontFamily: "Cairo",
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                ...List.generate(phones.length, (index) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(16),
+                      onTap: () => Navigator.pop(ctx, index),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 14,
+                        ),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey.shade200),
+                          color: Colors.grey.shade50,
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.call_outlined),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                phones[index],
+                                style: const TextStyle(
+                                  fontFamily: "Cairo",
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<bool> _showRestaurantCallConfirmSheet(String phone) async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: false,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 42,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Container(
+                  width: 62,
+                  height: 62,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.green.withOpacity(0.10),
+                  ),
+                  child: const Icon(
+                    Icons.support_agent_rounded,
+                    size: 30,
+                    color: Colors.green,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  trSafe(
+                    "tracking.confirm_restaurant_call_title",
+                    fallback: "هل تم التواصل مع المطعم؟",
+                  ),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontFamily: "Cairo",
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "$phone\n${trSafe("tracking.confirm_restaurant_call_desc", fallback: "أكيد العملية حتى نكمل إرسال الطلب للمطبخ.")}",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: "Cairo",
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black.withOpacity(0.65),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Text(
+                          trSafe("common.cancel", fallback: "إلغاء"),
+                          style: const TextStyle(
+                            fontFamily: "Cairo",
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(
+                          elevation: 0,
+                          backgroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: Text(
+                          trSafe(
+                            "tracking.yes_called",
+                            fallback: "نعم، تم الاتصال",
+                          ),
+                          style: const TextStyle(
+                            fontFamily: "Cairo",
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    return result ?? false;
   }
 
   Future<void> _exitAndClearCache() async {
@@ -614,35 +945,10 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   }
 
   Future<void> _callRestaurantAt(int index) async {
-    final phones = restaurantPhones();
-    if (index < 0 || index >= phones.length) {
-      showFancyToast(
-        context,
-        success: false,
-        title: trSafe("toast.error_title", fallback: "خطأ"),
-        message: trSafe(
-          "common.phone_missing",
-          fallback: "رقم الهاتف غير موجود",
-        ),
-      );
-      return;
-    }
-
-    final ok = await callNumber(phones[index]);
-    if (!mounted) return;
-
-    if (ok && !restaurantCalled) {
-      setState(() => restaurantCalled = true);
-      showFancyToast(
-        context,
-        success: true,
-        title: trSafe("toast.success_title", fallback: "نجاح"),
-        message: trSafe(
-          "tracking.restaurant_called",
-          fallback: "تم الاتصال بالمطعم",
-        ),
-      );
-    }
+    await _startRestaurantContactFlow(
+      forcedPhoneIndex: index,
+      autoSendAfterConfirmation: true,
+    );
   }
 
   Future<void> startInWay() async {
@@ -935,21 +1241,15 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
 
         state.whenOrNull(
           success: (_, message) {
-            showFancyToast(
-              context,
-              success: true,
-              title: trSafe("toast.success_title", fallback: "نجاح"),
-              message: trMaybe(message),
-            );
+            showFancyToast(context, message: trMaybe(message));
             context.read<OrderStatusCubit>().reset();
           },
           error: (_, message) {
-            showFancyToast(
-              context,
-              success: false,
-              title: trSafe("toast.error_title", fallback: "خطأ"),
-              message: trMaybe(message),
-            );
+            if (mounted) {
+              setState(() => primaryLoading = false);
+            }
+
+            showFancyToast(context, message: trMaybe(message));
             context.read<OrderStatusCubit>().reset();
           },
         );
