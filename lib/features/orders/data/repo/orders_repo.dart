@@ -87,10 +87,7 @@ class OrdersRepository {
     required String reason,
   }) async {
     try {
-      final res = await api.emergency({
-        "order_id": orderId,
-        "reason": reason,
-      });
+      final res = await api.emergency({"order_id": orderId, "reason": reason});
       return _mapSuccess(
         res,
         fallbackMessage: "تم إرسال البلاغ",

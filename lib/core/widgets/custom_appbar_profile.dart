@@ -20,8 +20,9 @@ class CustomAppbarProfile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 8,right: 8,top: 30),
+    return Container(
+      color: AppTheme.black.withOpacity(0.35),
+      padding: const EdgeInsets.only(left: 8, right: 8, top: 30),
       child: SizedBox(
         height: 48.h,
         child: Stack(
@@ -37,18 +38,11 @@ class CustomAppbarProfile extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: AppTheme.black,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppTheme.LightActive,
-                        width: 2,
-                      ),
+                      border: Border.all(color: AppTheme.LightActive, width: 2),
                     ),
                     child: Padding(
                       padding: const EdgeInsetsDirectional.only(start: 6),
-                      child: Icon(
-                        icon,
-                        color: AppTheme.white,
-                        size: 16.sp,
-                      ),
+                      child: Icon(icon, color: AppTheme.white, size: 16.sp),
                     ),
                   ),
                 ),
@@ -65,7 +59,8 @@ class CustomAppbarProfile extends StatelessWidget {
                     fontSize: 22.sp,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.white,
-                    fontFamily: Localizations.localeOf(context).languageCode == 'ar'
+                    fontFamily:
+                        Localizations.localeOf(context).languageCode == 'ar'
                         ? 'Cairo'
                         : 'Inter',
                   ),

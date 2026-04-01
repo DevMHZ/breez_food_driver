@@ -26,7 +26,7 @@ class _DriverStatusApiService implements DriverStatusApiService {
     const Map<String, dynamic>? _data = null;
     final _result =
         await _dio.fetch(_setStreamType<HttpResponse<dynamic>>(Options(
-      method: 'GET',
+      method: 'POST',
       headers: _headers,
       extra: _extra,
     )

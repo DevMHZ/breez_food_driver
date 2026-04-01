@@ -81,12 +81,12 @@ class HomeBottomBar extends StatelessWidget {
       return _StatusMeta("غير متصل", AppTheme.red);
     }
 
-    // ✅ متصل بس لسا مو جاهز يبحث (مثلاً Pusher مو CONNECTED)
+    // ✅ متصل وجاهز (الحالة المؤقتة جداً)
     if (isConnected && !isSearching) {
       return _StatusMeta("متصل", AppTheme.primary);
     }
 
-    // ✅ جاهز ويبحث
+    // ✅ جاري البحث
     if (isSearching) {
       return _StatusMeta("جاري البحث", AppTheme.green);
     }

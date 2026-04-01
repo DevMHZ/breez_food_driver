@@ -7,6 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
+import '../../../../core/widgets/custom_appbar_profile.dart';
+
 class HelpCenter extends StatefulWidget {
   const HelpCenter({super.key});
 
@@ -73,11 +75,14 @@ class _HelpCenterState extends State<HelpCenter> {
           body: SafeArea(
             child: Column(
               children: [
-                _TopBar(
-                  title: "help_center.title".tr(),
-                  onClose: () => Navigator.pop(context),
-                ),
-
+                // _TopBar(
+                //   title: "help_center.title".tr(),
+                //   onClose: () => Navigator.pop(context),
+                // ),
+              CustomAppbarProfile(
+              icon: Icons.arrow_back_ios,
+              ontap: () => Navigator.pop(context),
+              title: "help_center.title".tr(),),
                 Expanded(
                   child: Container(
                     width: double.infinity,

@@ -43,28 +43,26 @@ class _TermsState extends State<Terms> {
             statusBarBrightness: Brightness.dark,
           ),
           child: Scaffold(
+            backgroundColor: AppTheme.black.withOpacity(0.35),
             appBar: AppBar(
               elevation: 0,
               scrolledUnderElevation: 0,
               surfaceTintColor: Colors.transparent,
               shadowColor: Colors.transparent,
               automaticallyImplyLeading: false,
-              toolbarHeight: 60.h,
+              toolbarHeight: 80.h,
               systemOverlayStyle: const SystemUiOverlayStyle(
                 statusBarColor: Colors.transparent,
                 statusBarIconBrightness: Brightness.light,
                 statusBarBrightness: Brightness.dark,
               ),
               titleSpacing: 0,
-              title: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: CustomAppbarProfile(
-                  icon: Icons.arrow_back_ios,
-                  ontap: () => Navigator.pop(context),
-                  title: "الشروط والأحكام".tr(),
+              title: CustomAppbarProfile(
+                icon: Icons.arrow_back_ios,
+                ontap: () => Navigator.pop(context),
+                title: "الشروط والأحكام".tr(),
 
-                  backgroundcolor: Colors.transparent,
-                ),
+                backgroundcolor: Colors.transparent,
               ),
             ),
 

@@ -28,7 +28,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.breez_food_driver"
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName

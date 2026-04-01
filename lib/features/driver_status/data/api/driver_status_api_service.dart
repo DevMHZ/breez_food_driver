@@ -8,6 +8,6 @@ abstract class DriverStatusApiService {
   factory DriverStatusApiService(Dio dio, {String? baseUrl}) =
       _DriverStatusApiService;
 
-  @GET('/driver/changeStatus')
+  @POST('/driver/changeStatus')
   Future<HttpResponse<dynamic>> changeStatus();
 }

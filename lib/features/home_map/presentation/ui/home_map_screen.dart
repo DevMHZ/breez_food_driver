@@ -31,7 +31,7 @@ import 'package:pusher_channels_flutter/pusher_channels_flutter.dart';
 import 'widgets/home_body_stack.dart';
 import 'widgets/offer_listener.dart';
 
-enum DriverStatus { offline, searching, offerReceived }
+enum DriverStatus { offline, connected, searching, offerReceived }
 
 const String general_url = 'https://breezefood.cloud/api';
 
@@ -406,32 +406,39 @@ class _HomeMapScreenState extends State<HomeMapScreen>
     if (_isChangingStatus) return;
     if (_driverStatus == DriverStatus.offerReceived) return;
 
-    final targetOnline = !_isOnline;
-
     setState(() => _isChangingStatus = true);
 
-    final cubit = context.read<DriverStatusCubit>();
-    final newIsOnline = await cubit.setOnline(targetOnline, current: _isOnline);
+    if (!_isOnline) {
+      // الانتقال من "غير متصل" إلى "متصل" ثم "جاري البحث"
+      setState(() {
+        _isOnline = true;
+        _driverStatus = DriverStatus.connected; // حالة "متصل" المؤقتة
+      });
 
-    if (!mounted) return;
-    setState(() => _isChangingStatus = false);
+      // انتظر 300ms ثم انتقل إلى "جاري البحث"
+      await Future.delayed(const Duration(milliseconds: 300));
 
-    if (newIsOnline != targetOnline) {
-      _log("TOGGLE ERROR => expected=$targetOnline got=$newIsOnline");
-      return;
+      if (!mounted) return;
+      setState(() {
+        _driverStatus = DriverStatus.searching; // الآن "جاري البحث"
+      });
+    } else {
+      // الانتقال من "جاري البحث" إلى "غير متصل"
+      setState(() {
+        _isOnline = false;
+        _driverStatus = DriverStatus.offline;
+      });
     }
+
+    final cubit = context.read<DriverStatusCubit>();
+    await cubit.setOnline(_isOnline, current: !_isOnline);
 
     await AuthStorageHelper.setFlag(
       AuthStorageHelper.manualOfflineKey,
-      !newIsOnline!,
+      !_isOnline,
     );
 
-    if (!mounted) return;
-
-    setState(() {
-      _isOnline = newIsOnline;
-      _driverStatus = _isOnline ? DriverStatus.searching : DriverStatus.offline;
-    });
+    setState(() => _isChangingStatus = false);
 
     context.read<DriverLocationCubit>().setOnline(
       _isOnline,
@@ -879,8 +886,12 @@ class _HomeMapScreenState extends State<HomeMapScreen>
                 isChangingStatus: _isChangingStatus || _isBootstrapping,
                 onToggleOnline: _toggleOnline,
                 onTestSound: startOfferSound,
-                isConnected: _hasInternet,
-                isSearching: _isOnline && _realtimeConnected,
+                isConnected:
+                    _isOnline &&
+                    (_driverStatus == DriverStatus.connected ||
+                        _driverStatus == DriverStatus.searching),
+                isSearching:
+                    _isOnline && _driverStatus == DriverStatus.searching,
               ),
 
               Positioned(

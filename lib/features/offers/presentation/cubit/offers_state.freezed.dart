@@ -91,9 +91,6 @@ class _$OfferStateCopyWithImpl<$Res, $Val extends OfferState>
   final $Val _value;
   // ignore: unused_field
   final $Res Function($Val) _then;
-
-  /// Create a copy of OfferState
-  /// with the given fields replaced by the non-null parameter values.
 }
 
 /// @nodoc
@@ -109,9 +106,6 @@ class __$$IdleImplCopyWithImpl<$Res>
     implements _$$IdleImplCopyWith<$Res> {
   __$$IdleImplCopyWithImpl(_$IdleImpl _value, $Res Function(_$IdleImpl) _then)
       : super(_value, _then);
-
-  /// Create a copy of OfferState
-  /// with the given fields replaced by the non-null parameter values.
 }
 
 /// @nodoc
@@ -236,8 +230,6 @@ class __$$ReceivedImplCopyWithImpl<$Res>
       _$ReceivedImpl _value, $Res Function(_$ReceivedImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of OfferState
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -283,9 +275,7 @@ class _$ReceivedImpl implements _Received {
   int get hashCode =>
       Object.hash(runtimeType, const DeepCollectionEquality().hash(_offer));
 
-  /// Create a copy of OfferState
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$ReceivedImplCopyWith<_$ReceivedImpl> get copyWith =>
@@ -378,10 +368,7 @@ abstract class _Received implements OfferState {
       _$ReceivedImpl;
 
   Map<String, dynamic> get offer;
-
-  /// Create a copy of OfferState
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$ReceivedImplCopyWith<_$ReceivedImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -403,8 +390,6 @@ class __$$ActionLoadingImplCopyWithImpl<$Res>
       _$ActionLoadingImpl _value, $Res Function(_$ActionLoadingImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of OfferState
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -450,9 +435,7 @@ class _$ActionLoadingImpl implements _ActionLoading {
   int get hashCode =>
       Object.hash(runtimeType, const DeepCollectionEquality().hash(_offer));
 
-  /// Create a copy of OfferState
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$ActionLoadingImplCopyWith<_$ActionLoadingImpl> get copyWith =>
@@ -545,10 +528,7 @@ abstract class _ActionLoading implements OfferState {
       _$ActionLoadingImpl;
 
   Map<String, dynamic> get offer;
-
-  /// Create a copy of OfferState
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$ActionLoadingImplCopyWith<_$ActionLoadingImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -570,8 +550,6 @@ class __$$AcceptedImplCopyWithImpl<$Res>
       _$AcceptedImpl _value, $Res Function(_$AcceptedImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of OfferState
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -617,9 +595,7 @@ class _$AcceptedImpl implements _Accepted {
   int get hashCode =>
       Object.hash(runtimeType, const DeepCollectionEquality().hash(_offer));
 
-  /// Create a copy of OfferState
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$AcceptedImplCopyWith<_$AcceptedImpl> get copyWith =>
@@ -712,10 +688,7 @@ abstract class _Accepted implements OfferState {
       _$AcceptedImpl;
 
   Map<String, dynamic> get offer;
-
-  /// Create a copy of OfferState
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$AcceptedImplCopyWith<_$AcceptedImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
@@ -737,8 +710,6 @@ class __$$ErrorImplCopyWithImpl<$Res>
       _$ErrorImpl _value, $Res Function(_$ErrorImpl) _then)
       : super(_value, _then);
 
-  /// Create a copy of OfferState
-  /// with the given fields replaced by the non-null parameter values.
   @pragma('vm:prefer-inline')
   @override
   $Res call({
@@ -794,9 +765,7 @@ class _$ErrorImpl implements _Error {
   int get hashCode => Object.hash(
       runtimeType, message, const DeepCollectionEquality().hash(_offer));
 
-  /// Create a copy of OfferState
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   @override
   @pragma('vm:prefer-inline')
   _$$ErrorImplCopyWith<_$ErrorImpl> get copyWith =>
@@ -891,10 +860,7 @@ abstract class _Error implements OfferState {
 
   String get message;
   Map<String, dynamic>? get offer;
-
-  /// Create a copy of OfferState
-  /// with the given fields replaced by the non-null parameter values.
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @JsonKey(ignore: true)
   _$$ErrorImplCopyWith<_$ErrorImpl> get copyWith =>
       throw _privateConstructorUsedError;
 }
