@@ -61,9 +61,8 @@ class _EarningsMainViewState extends State<_EarningsMainView> {
     });
   }
 
-  String? get _apiDate => _isToday(_selectedDate)
-      ? null
-      : DateFormat('yyyy-M-d').format(_selectedDate);
+  String? get _apiDate =>
+      _isToday(_selectedDate) ? null : DateFormat('yyyy-M-d').format(_selectedDate);
 
   Future<void> _loadAll() async {
     await context.read<EarningsCubit>().load(date: _apiDate);
@@ -78,17 +77,15 @@ class _EarningsMainViewState extends State<_EarningsMainView> {
         now.day == date.day;
   }
 
-  String _dateChipLabel(BuildContext context) {
+  String _dateChipLabel() {
     if (_isToday(_selectedDate)) return 'اليوم';
     return DateFormat('d MMM', 'ar').format(_selectedDate);
   }
 
-  String _fullDateLabel(BuildContext context, String rawDate) {
+  String _fullDateLabel(String rawDate) {
     DateTime date;
     try {
-      date = rawDate.trim().isNotEmpty
-          ? DateTime.parse(rawDate)
-          : _selectedDate;
+      date = rawDate.trim().isNotEmpty ? DateTime.parse(rawDate) : _selectedDate;
     } catch (_) {
       date = _selectedDate;
     }
@@ -106,11 +103,13 @@ class _EarningsMainViewState extends State<_EarningsMainView> {
     );
 
     if (picked == null) return;
+
     final normalized = DateTime(picked.year, picked.month, picked.day);
     final isSame =
         normalized.year == _selectedDate.year &&
         normalized.month == _selectedDate.month &&
         normalized.day == _selectedDate.day;
+
     if (isSame) return;
 
     setState(() {
@@ -135,16 +134,14 @@ class _EarningsMainViewState extends State<_EarningsMainView> {
                     child: EarningsToggleTab(
                       title: 'السائق',
                       selected: _tab == _EarningsMainTab.driver,
-                      onTap: () =>
-                          setState(() => _tab = _EarningsMainTab.driver),
+                      onTap: () => setState(() => _tab = _EarningsMainTab.driver),
                     ),
                   ),
                   Expanded(
                     child: EarningsToggleTab(
-                      title: 'شركة Breeze',
+                      title: 'الشركة',
                       selected: _tab == _EarningsMainTab.company,
-                      onTap: () =>
-                          setState(() => _tab = _EarningsMainTab.company),
+                      onTap: () => setState(() => _tab = _EarningsMainTab.company),
                     ),
                   ),
                 ],
@@ -153,7 +150,7 @@ class _EarningsMainViewState extends State<_EarningsMainView> {
               Row(
                 children: [
                   EarningsDatePickerChip(
-                    label: _dateChipLabel(context),
+                    label: _dateChipLabel(),
                     onTap: _pickDate,
                   ),
                   SizedBox(width: 12.w),
@@ -174,7 +171,7 @@ class _EarningsMainViewState extends State<_EarningsMainView> {
                             ),
                             SizedBox(height: 2.h),
                             Text(
-                              _fullDateLabel(context, dataDate),
+                              _fullDateLabel(dataDate),
                               style: TextStyle(
                                 color: Colors.white60,
                                 fontSize: 12.sp,
@@ -198,8 +195,7 @@ class _EarningsMainViewState extends State<_EarningsMainView> {
                             );
                           }
 
-                          if (state.errorMessage.isNotEmpty &&
-                              state.data == null) {
+                          if (state.errorMessage.isNotEmpty && state.data == null) {
                             return EarningsErrorView(
                               message: state.errorMessage,
                               onRetry: _loadAll,
@@ -233,8 +229,7 @@ class _EarningsMainViewState extends State<_EarningsMainView> {
                             );
                           }
 
-                          if (state.errorMessage.isNotEmpty &&
-                              state.data == null) {
+                          if (state.errorMessage.isNotEmpty && state.data == null) {
                             return EarningsErrorView(
                               message: state.errorMessage,
                               onRetry: _loadAll,
@@ -243,7 +238,7 @@ class _EarningsMainViewState extends State<_EarningsMainView> {
 
                           final data = state.data;
                           if (data == null) {
-                            return EarningsEmptyView(
+                            return const EarningsEmptyView(
                               title: 'لا توجد بيانات',
                               subtitle: 'لا توجد بيانات متاحة لهذا اليوم',
                             );
@@ -283,6 +278,7 @@ class _DriverTabContent extends StatelessWidget {
       0,
       (max, item) => item.amount > max ? item.amount : max,
     );
+
     final points = data.earningsByHour.map((item) {
       return ChartBarUiModel(
         label: item.label,
@@ -292,6 +288,7 @@ class _DriverTabContent extends StatelessWidget {
         highlighted: item.amount > 0 && item.amount == maxAmount,
       );
     }).toList();
+
     return Stack(
       children: [
         ListView(
@@ -324,7 +321,7 @@ class _DriverTabContent extends StatelessWidget {
                 Expanded(
                   child: EarningsCountCard(
                     iconAsset: 'assets/b_driver/vip_orders.svg',
-                    label: 'طلبات VIP',
+                    label: 'طلبات مميزة',
                     count: data.ordersStats.vip,
                   ),
                 ),
@@ -382,7 +379,7 @@ class _DriverTabContent extends StatelessWidget {
                         ),
                         SizedBox(height: 6.h),
                         Text(
-                          '${data.totalDistance.toStringAsFixed(1)} KM',
+                          '${data.totalDistance.toStringAsFixed(1)} كم',
                           style: TextStyle(
                             color: Colors.white,
                             fontSize: 20.sp,
@@ -420,7 +417,10 @@ class _CompanyTabContent extends StatelessWidget {
   final EarningsFinancialDetailsData data;
   final bool isRefreshing;
 
-  const _CompanyTabContent({required this.data, required this.isRefreshing});
+  const _CompanyTabContent({
+    required this.data,
+    required this.isRefreshing,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -475,14 +475,14 @@ class _CompanyTabContent extends StatelessWidget {
             SizedBox(height: 10.h),
             EarningsStatCard(
               icon: Icons.store_mall_directory_outlined,
-              label: 'نسبة الشركة من المطاعم',
+              label: 'حصة الشركة من المطاعم',
               value: context.syp(data.commissions.companyFromRestaurants),
               compact: true,
             ),
             SizedBox(height: 10.h),
             EarningsStatCard(
               icon: Icons.delivery_dining_outlined,
-              label: 'نسبة الشركة من السائقين',
+              label: 'حصة الشركة من السائقين',
               value: context.syp(data.commissions.companyFromDrivers),
               compact: true,
             ),
@@ -492,8 +492,7 @@ class _CompanyTabContent extends StatelessWidget {
                 Expanded(
                   child: EarningsCountCard(
                     iconAsset: 'assets/b_driver/vip_orders.svg',
-
-                    label: 'طلبات VIP',
+                    label: 'طلبات مميزة',
                     count: data.ordersStats.vip,
                   ),
                 ),
@@ -513,7 +512,7 @@ class _CompanyTabContent extends StatelessWidget {
                 Expanded(
                   child: EarningsStatCard(
                     icon: Icons.attach_money_outlined,
-                    label: 'إجمالي طلبات VIP',
+                    label: 'إجمالي الطلبات المميزة',
                     value: context.syp(data.amountsByType.vipTotal),
                     compact: true,
                   ),
@@ -535,7 +534,7 @@ class _CompanyTabContent extends StatelessWidget {
                 Expanded(
                   child: EarningsStatCard(
                     icon: Icons.admin_panel_settings_outlined,
-                    label: 'نسبة الإدارة من VIP',
+                    label: 'نسبة الإدارة من الطلبات المميزة',
                     value: context.syp(data.adminFees.fromVip),
                     compact: true,
                   ),
@@ -544,7 +543,7 @@ class _CompanyTabContent extends StatelessWidget {
                 Expanded(
                   child: EarningsStatCard(
                     icon: Icons.admin_panel_settings_outlined,
-                    label: 'نسبة الإدارة من العادي',
+                    label: 'نسبة الإدارة من الطلبات العادية',
                     value: context.syp(data.adminFees.fromRegular),
                     compact: true,
                   ),
@@ -599,7 +598,10 @@ class _TopAmountBlock extends StatelessWidget {
         SizedBox(height: 14.h),
         Text(
           label,
-          style: TextStyle(color: Colors.white70, fontSize: 12.sp),
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 12.sp,
+          ),
         ),
         SizedBox(height: 4.h),
         Text(
@@ -619,7 +621,10 @@ class _LargeMetricLine extends StatelessWidget {
   final String label;
   final String value;
 
-  const _LargeMetricLine({required this.label, required this.value});
+  const _LargeMetricLine({
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -628,7 +633,10 @@ class _LargeMetricLine extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(color: Colors.white70, fontSize: 13.sp),
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 13.sp,
+          ),
         ),
         SizedBox(height: 4.h),
         Text(

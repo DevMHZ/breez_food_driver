@@ -1249,7 +1249,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
               setState(() => primaryLoading = false);
             }
 
-            showFancyToast(context, message: trMaybe(message));
+            showFancyToast(success: false, context, message: trMaybe(message));
             context.read<OrderStatusCubit>().reset();
           },
         );
@@ -1303,24 +1303,6 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                           controller: scrollController,
                           physics: const BouncingScrollPhysics(),
                           slivers: [
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 10,
-                                  bottom: 8,
-                                ),
-                                child: Center(
-                                  child: Container(
-                                    width: 44,
-                                    height: 5,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey.shade400,
-                                      borderRadius: BorderRadius.circular(99),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
                             SliverToBoxAdapter(
                               child: TrackingPrettyPanel(
                                 showOrderSection:

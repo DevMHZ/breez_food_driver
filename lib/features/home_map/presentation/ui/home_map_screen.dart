@@ -212,7 +212,7 @@ class _HomeMapScreenState extends State<HomeMapScreen>
 
   bool _followMe = true;
   bool _mapReady = false;
-
+  bool _isBootstrapping = true;
   DateTime _lastUiUpdate = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastCameraMove = DateTime.fromMillisecondsSinceEpoch(0);
   LatLng? _lastCameraTarget;
@@ -314,30 +314,48 @@ class _HomeMapScreenState extends State<HomeMapScreen>
   }
 
   Future<void> _bootstrap() async {
-    final driverId = (await AuthStorageHelper.getUserId())?.toString();
-    final token = await AuthStorageHelper.getToken();
-    final manualOffline =
-        (await AuthStorageHelper.getFlag(AuthStorageHelper.manualOfflineKey)) ??
-        false;
+    try {
+      final driverId = (await AuthStorageHelper.getUserId())?.toString();
+      final token = await AuthStorageHelper.getToken();
 
-    _log(
-      "BOOTSTRAP => driverId=$driverId tokenLen=${token?.length ?? 0} manualOffline=$manualOffline",
-    );
+      final manualOffline =
+          (await AuthStorageHelper.getFlag(
+            AuthStorageHelper.manualOfflineKey,
+          )) ??
+          true;
 
-    final initialOnline = !manualOffline;
+      _log(
+        "BOOTSTRAP => driverId=$driverId tokenLen=${token?.length ?? 0} manualOffline=$manualOffline",
+      );
 
-    setState(() {
-      _isOnline = initialOnline;
-      _driverStatus = _isOnline ? DriverStatus.searching : DriverStatus.offline;
-    });
+      final initialOnline = !manualOffline;
 
-    await _realtime.start(connectIfOnline: initialOnline);
-    await _realtime.setOnline(initialOnline);
+      await _realtime.start(connectIfOnline: false);
 
-    context.read<DriverLocationCubit>().setOnline(
-      initialOnline,
-      interval: kLocationSendInterval,
-    );
+      if (!mounted) return;
+
+      setState(() {
+        _isOnline = initialOnline;
+        _driverStatus = _isOnline
+            ? DriverStatus.searching
+            : DriverStatus.offline;
+      });
+
+      await _realtime.setOnline(initialOnline);
+
+      if (!mounted) return;
+
+      context.read<DriverLocationCubit>().setOnline(
+        initialOnline,
+        interval: kLocationSendInterval,
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isBootstrapping = false;
+        });
+      }
+    }
   }
 
   // -------------------- Local restore (NO SERVER CHECK)
@@ -383,8 +401,8 @@ class _HomeMapScreenState extends State<HomeMapScreen>
     }
   }
 
-  // -------------------- Online toggle
   Future<void> _toggleOnline() async {
+    if (_isBootstrapping) return;
     if (_isChangingStatus) return;
     if (_driverStatus == DriverStatus.offerReceived) return;
 
@@ -405,7 +423,7 @@ class _HomeMapScreenState extends State<HomeMapScreen>
 
     await AuthStorageHelper.setFlag(
       AuthStorageHelper.manualOfflineKey,
-      newIsOnline!,
+      !newIsOnline!,
     );
 
     if (!mounted) return;
@@ -439,6 +457,11 @@ class _HomeMapScreenState extends State<HomeMapScreen>
       _log("FORCE ONLINE FAILED");
       return;
     }
+
+    // ✅ بما أنه صار أونلاين، إذًا مو manualOffline
+    await AuthStorageHelper.setFlag(AuthStorageHelper.manualOfflineKey, false);
+
+    if (!mounted) return;
 
     setState(() {
       _isOnline = true;
@@ -749,9 +772,9 @@ class _HomeMapScreenState extends State<HomeMapScreen>
 
     final manualOffline =
         (await AuthStorageHelper.getFlag(AuthStorageHelper.manualOfflineKey)) ??
-        false;
+        true;
 
-    if (!manualOffline) {
+    if (!manualOffline && !_isOnline) {
       await _forceOnline();
     }
   }
@@ -853,7 +876,7 @@ class _HomeMapScreenState extends State<HomeMapScreen>
                 followMe: _followMe,
                 isOnline: _isOnline,
                 hasOffer: _showOfferSheet && _currentOffer != null,
-                isChangingStatus: _isChangingStatus,
+                isChangingStatus: _isChangingStatus || _isBootstrapping,
                 onToggleOnline: _toggleOnline,
                 onTestSound: startOfferSound,
                 isConnected: _hasInternet,
