@@ -32,8 +32,10 @@ class TrackingPrettyPanel extends StatelessWidget {
 
   final String primaryBtnText;
   final bool primaryBtnEnabled;
-  final VoidCallback onPrimaryPressed;
-  final VoidCallback onEmergencyPressed;
+  final bool showPrimaryHint;
+  final String? primaryHintText;
+  final Future<void> Function() onPrimaryPressed;
+  final Future<void> Function() onEmergencyPressed;
 
   final Map<String, dynamic>? customer;
 
@@ -59,6 +61,8 @@ class TrackingPrettyPanel extends StatelessWidget {
     required this.onNavigateTo,
     required this.primaryBtnText,
     required this.primaryBtnEnabled,
+    required this.showPrimaryHint,
+    required this.primaryHintText,
     required this.onPrimaryPressed,
     required this.onEmergencyPressed,
     this.customer,
@@ -328,6 +332,9 @@ class TrackingPrettyPanel extends StatelessWidget {
         customerName != 'الزبون';
 
     const bottomBarH = 84.0;
+    final hasPrimaryHint =
+        showPrimaryHint && (primaryHintText?.trim().isNotEmpty ?? false);
+    final extraBottomInset = hasPrimaryHint ? 74.0 : 0.0;
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -348,7 +355,7 @@ class TrackingPrettyPanel extends StatelessWidget {
         child: Stack(
           children: [
             Padding(
-              padding: const EdgeInsets.only(bottom: bottomBarH),
+              padding: EdgeInsets.only(bottom: bottomBarH + extraBottomInset),
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Column(
@@ -385,7 +392,6 @@ class TrackingPrettyPanel extends StatelessWidget {
                               )
                             else
                               _emptyHint('ليس هناك عناصر'),
-
                             if (appetizers.isNotEmpty) ...[
                               if (items.isNotEmpty) const SizedBox(height: 2),
                               Align(
@@ -414,7 +420,6 @@ class TrackingPrettyPanel extends StatelessWidget {
                                 ),
                               ),
                             ],
-
                             const SizedBox(height: 2),
                             _LabelValueBlock(
                               label: 'ملاحظة الطلب',
@@ -426,7 +431,6 @@ class TrackingPrettyPanel extends StatelessWidget {
                       ),
                       _gap(10),
                     ],
-
                     if (shouldShowCustomerSection) ...[
                       ExpandedSection(
                         title: 'الزبون',
@@ -449,7 +453,6 @@ class TrackingPrettyPanel extends StatelessWidget {
                         ),
                       ),
                     ],
-
                     if (detailsLoading) ...[
                       _gap(10),
                       Row(
@@ -469,18 +472,22 @@ class TrackingPrettyPanel extends StatelessWidget {
                         ],
                       ),
                     ],
-
                     if ((detailsError ?? '').trim().isNotEmpty) ...[
                       _gap(10),
                       _ErrorBox(text: detailsError!.trim(), onRetry: onRetry),
                     ],
-
                     _gap(10),
                   ],
                 ),
               ),
             ),
-
+            if (hasPrimaryHint)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: bottomBarH + 10,
+                child: _PrimaryHintBox(text: primaryHintText!.trim()),
+              ),
             Positioned(
               left: 0,
               right: 0,
@@ -567,6 +574,28 @@ class _RestaurantHeaderCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (has1 || has2) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    if (has1) ...[
+                      _miniActionBtn(
+                        icon: Icons.call_rounded,
+                        label: '1',
+                        onTap: onCall1,
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    if (has2) ...[
+                      _miniActionBtn(
+                        icon: Icons.call_rounded,
+                        label: '2',
+                        onTap: onCall2,
+                      ),
+                    ],
+                  ],
+                ),
+              ],
               if (restaurantCalled)
                 Container(
                   padding: const EdgeInsets.symmetric(
@@ -608,28 +637,6 @@ class _RestaurantHeaderCard extends StatelessWidget {
               fontSize: 12,
             ),
           ),
-          if (has1 || has2) ...[
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                if (has1) ...[
-                  _miniActionBtn(
-                    icon: Icons.call_rounded,
-                    label: '1',
-                    onTap: onCall1,
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                if (has2) ...[
-                  _miniActionBtn(
-                    icon: Icons.call_rounded,
-                    label: '2',
-                    onTap: onCall2,
-                  ),
-                ],
-              ],
-            ),
-          ],
         ],
       ),
     );
@@ -940,8 +947,8 @@ class _BottomActionBar extends StatelessWidget {
   final String primaryText;
   final bool primaryEnabled;
   final bool primaryLoading;
-  final VoidCallback onPrimary;
-  final VoidCallback onEmergency;
+  final Future<void> Function() onPrimary;
+  final Future<void> Function() onEmergency;
 
   const _BottomActionBar({
     required this.primaryText,
@@ -963,7 +970,9 @@ class _BottomActionBar extends StatelessWidget {
         children: [
           Expanded(
             child: ElevatedButton(
-              onPressed: (primaryEnabled && !primaryLoading) ? onPrimary : null,
+              onPressed: (primaryEnabled && !primaryLoading)
+                  ? () => onPrimary()
+                  : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 disabledBackgroundColor: Colors.white12,
@@ -1003,7 +1012,51 @@ class _BottomActionBar extends StatelessWidget {
             icon: Icons.warning_amber_rounded,
             label: '',
             danger: true,
-            onTap: onEmergency,
+            onTap: () => onEmergency(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PrimaryHintBox extends StatelessWidget {
+  final String text;
+
+  const _PrimaryHintBox({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.orange.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.orange.withOpacity(0.35)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 1),
+            child: Icon(
+              Icons.info_outline_rounded,
+              color: Colors.orange,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w800,
+                height: 1.4,
+              ),
+            ),
           ),
         ],
       ),

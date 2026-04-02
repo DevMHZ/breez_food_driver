@@ -21,8 +21,8 @@ class EarningsOrdersScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => EarningsOrdersCubit(repository)
-        ..load(date: _apiDate(selectedDate)),
+      create: (_) =>
+          EarningsOrdersCubit(repository)..load(date: _apiDate(selectedDate)),
       child: _EarningsOrdersView(selectedDate: selectedDate),
     );
   }
@@ -57,9 +57,9 @@ class _EarningsOrdersView extends StatelessWidget {
               if (state.errorMessage.isNotEmpty && state.data == null) {
                 return EarningsErrorView(
                   message: state.errorMessage,
-                  onRetry: () => context
-                      .read<EarningsOrdersCubit>()
-                      .load(date: _apiDate(selectedDate)),
+                  onRetry: () => context.read<EarningsOrdersCubit>().load(
+                    date: _apiDate(selectedDate),
+                  ),
                 );
               }
 
@@ -110,7 +110,11 @@ class _EarningsOrdersView extends StatelessWidget {
                             value: '${data.stats.totalCount}',
                           ),
                         ),
-                        Container(width: 1, height: 38.h, color: Colors.white24),
+                        Container(
+                          width: 1,
+                          height: 38.h,
+                          color: Colors.white24,
+                        ),
                         SizedBox(width: 12.w),
                         Expanded(
                           child: _FilterStatBlock(
@@ -148,6 +152,7 @@ class _EarningsOrdersView extends StatelessWidget {
                                 deliveryTo: order.deliveryTo,
                                 customerImageUrl: order.customerImageUrl,
                                 createdAt: _formatDate(order.createdAt),
+                                deliveredAt: _formatDate(order.deliveredAt),
                                 note: order.note,
                               );
                             },
@@ -171,12 +176,28 @@ class _EarningsOrdersView extends StatelessWidget {
   }
 
   String _formatDate(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return '';
+
+    DateTime? parsed;
+
     try {
-      final parsed = DateTime.parse(raw).toLocal();
-      return DateFormat('dd/MM/yyyy - hh:mm a', 'ar').format(parsed);
-    } catch (_) {
-      return raw;
+      parsed = DateTime.parse(value).toLocal();
+    } catch (_) {}
+
+    parsed ??= () {
+      try {
+        return DateFormat('dd/MM/yyyy HH:mm', 'en').parseStrict(value);
+      } catch (_) {
+        return null;
+      }
+    }();
+
+    if (parsed == null) {
+      return '\u200E$value';
     }
+
+    return '\u200E${DateFormat('dd/MM/yyyy - HH:mm', 'en').format(parsed)}';
   }
 }
 
@@ -184,10 +205,7 @@ class _FilterStatBlock extends StatelessWidget {
   final String label;
   final String value;
 
-  const _FilterStatBlock({
-    required this.label,
-    required this.value,
-  });
+  const _FilterStatBlock({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -196,10 +214,7 @@ class _FilterStatBlock extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
-            color: Colors.white70,
-            fontSize: 12.sp,
-          ),
+          style: TextStyle(color: Colors.white70, fontSize: 12.sp),
         ),
         SizedBox(height: 6.h),
         Text(

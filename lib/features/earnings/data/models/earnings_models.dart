@@ -223,6 +223,50 @@ class EarningsOrdersFilterStats {
   }
 }
 
+class EarningsOrderTimestamps {
+  final String createdAt;
+  final String deliveredAt;
+
+  const EarningsOrderTimestamps({
+    required this.createdAt,
+    required this.deliveredAt,
+  });
+
+  const EarningsOrderTimestamps.empty()
+      : createdAt = '',
+        deliveredAt = '';
+
+  bool get hasCreatedAt => createdAt.trim().isNotEmpty;
+  bool get hasDeliveredAt => deliveredAt.trim().isNotEmpty;
+
+  factory EarningsOrderTimestamps.fromJson(
+    Map<String, dynamic> json, {
+    String fallbackCreatedAt = '',
+    String fallbackDeliveredAt = '',
+  }) {
+    if (json.isEmpty &&
+        fallbackCreatedAt.trim().isEmpty &&
+        fallbackDeliveredAt.trim().isEmpty) {
+      return const EarningsOrderTimestamps.empty();
+    }
+
+    return EarningsOrderTimestamps(
+      createdAt: _firstNonEmpty([
+        json['created_at'],
+        json['createdAt'],
+        json['created'],
+        fallbackCreatedAt,
+      ]),
+      deliveredAt: _firstNonEmpty([
+        json['delivered_at'],
+        json['deliveredAt'],
+        json['delivered'],
+        fallbackDeliveredAt,
+      ]),
+    );
+  }
+}
+
 class EarningsOrderItem {
   final int id;
   final String orderNumber;
@@ -235,9 +279,9 @@ class EarningsOrderItem {
   final double vipPrice;
   final bool isVip;
   final String deliveryTo;
-  final String createdAt;
   final String customerImage;
   final String note;
+  final EarningsOrderTimestamps timestamps;
 
   const EarningsOrderItem({
     required this.id,
@@ -251,22 +295,30 @@ class EarningsOrderItem {
     required this.vipPrice,
     required this.isVip,
     required this.deliveryTo,
-    required this.createdAt,
     required this.customerImage,
     required this.note,
+    required this.timestamps,
   });
 
   String get restaurantLogoUrl => _fullUrl(restaurantLogo);
   String get customerImageUrl => _fullUrl(customerImage);
+
+  String get createdAt => timestamps.createdAt;
+  String get deliveredAt => timestamps.deliveredAt;
+
+  bool get hasCreatedAt => timestamps.hasCreatedAt;
+  bool get hasDeliveredAt => timestamps.hasDeliveredAt;
 
   factory EarningsOrderItem.fromJson(Map<String, dynamic> json) {
     final order = _nestedMap(json, 'order');
     final restaurant = _nestedMap(json, 'restaurant');
     final customer = _nestedMap(json, 'customer');
     final delivery = _nestedMap(json, 'delivery');
+    final amounts = _nestedMap(json, 'amounts');
+    final timestampsJson = _nestedMap(json, 'timestamps');
 
     final vipValue = _d(
-      _pickFirst(json, const [
+      _pickFirstDeep(json, amounts, const [
         'vip_price',
         'vip_amount',
         'vip_total',
@@ -296,18 +348,25 @@ class EarningsOrderItem {
           'image',
         ]),
       ]),
-      distanceKm: _d(_pickFirst(json, const ['distance_km', 'distance', 'km'])),
+      distanceKm: _d(
+        _pickFirstDeep(json, order, const [
+          'distance_km',
+          'distance',
+          'km',
+        ]),
+      ),
       customerAmount: _d(
-        _pickFirst(json, const [
+        _pickFirstDeep(json, amounts, const [
           'customer_amount',
           'amount_from_customer',
           'amount_collected',
           'cash_from_customer',
           'order_total',
+          'customer_paid',
         ]),
       ),
       driverEarning: _d(
-        _pickFirst(json, const [
+        _pickFirstDeep(json, amounts, const [
           'driver_earning',
           'driver_profit',
           'driver_total',
@@ -316,11 +375,12 @@ class EarningsOrderItem {
         ]),
       ),
       companyFromRestaurant: _d(
-        _pickFirst(json, const [
+        _pickFirstDeep(json, amounts, const [
           'company_from_restaurant',
           'restaurant_commission',
           'company_restaurant_commission',
           'company_share_from_restaurant',
+          'app_commission_food',
         ]),
       ),
       vipPrice: vipValue,
@@ -332,10 +392,6 @@ class EarningsOrderItem {
           'address_label',
         ]),
         _pickFirstDeep(json, customer, const ['name', 'full_name']),
-      ]),
-      createdAt: _firstNonEmpty([
-        _pickFirstDeep(json, order, const ['created_at', 'date', 'time']),
-        json['created_at'],
       ]),
       customerImage: _firstNonEmpty([
         _pickFirstDeep(json, customer, const [
@@ -350,6 +406,17 @@ class EarningsOrderItem {
         order['note'],
         order['notes'],
       ]),
+      timestamps: EarningsOrderTimestamps.fromJson(
+        timestampsJson,
+        fallbackCreatedAt: _firstNonEmpty([
+          _pickFirstDeep(json, order, const ['created_at', 'date', 'time']),
+          json['created_at'],
+        ]),
+        fallbackDeliveredAt: _firstNonEmpty([
+          _pickFirstDeep(json, order, const ['delivered_at']),
+          json['delivered_at'],
+        ]),
+      ),
     );
   }
 }

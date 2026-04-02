@@ -39,6 +39,66 @@ class OrderTrackingScreen extends StatefulWidget {
 
 class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     with TrackingHelpers {
+  final Completer<GoogleMapController> _controller = Completer();
+  final DraggableScrollableController _panelCtrl =
+      DraggableScrollableController();
+
+  static const double _minSheet = 0.18;
+  static const double _midSheet = 0.42;
+  static const double _maxSheet = 0.85;
+
+  bool restaurantCalled = false;
+  bool sentToKitchen = false;
+  bool primaryLoading = false;
+
+  bool inWay = false;
+  bool delivered = false;
+
+  BitmapDescriptor? customerIcon;
+  BitmapDescriptor? restaurantIcon;
+  BitmapDescriptor? driverIcon;
+
+  bool detailsLoading = false;
+  Map<String, dynamic>? details;
+  String? detailsError;
+
+  StreamSubscription<Position>? _posSub;
+  bool _locationStarted = false;
+
+  static const CameraPosition initialCameraPosition = CameraPosition(
+    target: LatLng(34.103001, -117.435728),
+    zoom: 14.47,
+  );
+
+  void _log(String msg) {
+    print("🟩[TRACKING ${widget.orderId}] $msg");
+  }
+
+  String get _sentToKitchenFlagKey => 'order_${widget.orderId}_sent_to_kitchen';
+
+  Future<void> _restoreSentToKitchenFlag() async {
+    final localFlag =
+        (await AuthStorageHelper.getFlag(_sentToKitchenFlagKey)) ?? false;
+
+    if (!mounted) return;
+
+    setState(() {
+      sentToKitchen = localFlag || inWay || delivered;
+    });
+
+    _log("📦 restore sentToKitchen => $sentToKitchen");
+  }
+
+  Future<void> _saveSentToKitchenFlag(bool value) async {
+    await AuthStorageHelper.setFlag(_sentToKitchenFlagKey, value);
+    _log("📦 save sentToKitchen flag => $value");
+  }
+
+  Future<void> _clearSentToKitchenFlag() async {
+    await AuthStorageHelper.setFlag(_sentToKitchenFlagKey, false);
+    _log("📦 clear sentToKitchen flag");
+  }
+
   List<String> restaurantPhones() {
     final r = restaurantMap();
     final p1 = (r['phone'] ?? '').toString().trim();
@@ -72,11 +132,13 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   }
 
   void _applyFlagsFromStatus(String s) {
-    final isPreparing = _statusIsPreparing(s);
     final isInWay = _statusIsInWay(s);
     final isDelivered = _statusIsDelivered(s);
 
-    sentToKitchen = isPreparing || isInWay || isDelivered;
+    final oldSentToKitchen = sentToKitchen;
+
+    // لا نعتبر preparing وحدها دليلًا على أن sendToKitchen انضرب
+    sentToKitchen = oldSentToKitchen || isInWay || isDelivered;
     inWay = isInWay || isDelivered;
     delivered = isDelivered;
 
@@ -96,38 +158,34 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     });
   }
 
-  final Completer<GoogleMapController> _controller = Completer();
-  final DraggableScrollableController _panelCtrl =
-      DraggableScrollableController();
+  String _startInWayBlockedMessage() {
+    return trSafe(
+      "tracking.start_inway_requires_restaurant_confirmation",
+      fallback:
+          "لا يمكنك البدء بالطريق قبل التواصل مع المطعم والتأكد من جاهزية الطلب.",
+    );
+  }
 
-  static const double _minSheet = 0.18;
-  static const double _midSheet = 0.42;
-  static const double _maxSheet = 0.85;
+  bool get _mustConfirmRestaurantBeforeInWay {
+    final s = _orderStatus();
+    return sentToKitchen && _statusIsPreparing(s) && !restaurantCalled;
+  }
 
-  bool restaurantCalled = false;
-  bool sentToKitchen = false;
-  bool primaryLoading = false;
+  String? _primaryHintText() {
+    final s = _orderStatus();
 
-  bool inWay = false;
-  bool delivered = false;
+    if (!sentToKitchen && !_statusIsDelivered(s) && !_statusIsInWay(s)) {
+      return trSafe(
+        "tracking.must_send_to_kitchen_first",
+        fallback: "يجب إرسال الطلب للمطبخ أولاً قبل البدء بالطريق.",
+      );
+    }
 
-  BitmapDescriptor? customerIcon;
-  BitmapDescriptor? restaurantIcon;
-  BitmapDescriptor? driverIcon;
-  bool detailsLoading = false;
-  Map<String, dynamic>? details;
-  String? detailsError;
+    if (_mustConfirmRestaurantBeforeInWay) {
+      return _startInWayBlockedMessage();
+    }
 
-  StreamSubscription<Position>? _posSub;
-  bool _locationStarted = false;
-
-  static const CameraPosition initialCameraPosition = CameraPosition(
-    target: LatLng(34.103001, -117.435728),
-    zoom: 14.47,
-  );
-
-  void _log(String msg) {
-    print("🟩[TRACKING ${widget.orderId}] $msg");
+    return null;
   }
 
   String _primaryBtnText() {
@@ -141,18 +199,25 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
       return trSafe("tracking.mark_delivered", fallback: "تأكيد التسليم");
     }
 
-    if (_statusIsPreparing(s)) {
-      return trSafe("tracking.start_inway", fallback: "ابدأ الطريق");
+    if (!sentToKitchen) {
+      if (!restaurantCalled) {
+        return trSafe(
+          "tracking.call_and_send_to_kitchen",
+          fallback: "اتصل بالمطعم ثم أرسل",
+        );
+      }
+
+      return trSafe("tracking.send_to_kitchen", fallback: "إرسال للمطبخ");
     }
 
     if (!restaurantCalled) {
       return trSafe(
-        "tracking.call_and_send_to_kitchen",
-        fallback: "اتصل بالمطعم ثم أرسل",
+        "tracking.confirm_restaurant_before_inway",
+        fallback: "أكد التواصل مع المطعم أولاً",
       );
     }
 
-    return trSafe("tracking.send_to_kitchen", fallback: "إرسال للمطبخ");
+    return trSafe("tracking.start_inway", fallback: "ابدأ الطريق");
   }
 
   String statusText() {
@@ -192,6 +257,17 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
       }
 
       await _sendToKitchenFlow();
+      return;
+    }
+
+    if (!restaurantCalled) {
+      showFancyToast(
+        context,
+        success: false,
+        message: _startInWayBlockedMessage(),
+      );
+
+      await _startRestaurantContactFlow(autoSendAfterConfirmation: false);
       return;
     }
 
@@ -238,13 +314,13 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
       _log("🍳 cubit.sendOrderToKitchen returned => $ok");
 
       if (!mounted) return;
-
       if (!ok) return;
 
       setState(() {
         sentToKitchen = true;
       });
 
+      await _saveSentToKitchenFlag(true);
       await _loadOrderDetails();
 
       if (!mounted) return;
@@ -278,8 +354,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     if (phones.isEmpty) {
       _log("☎️ no phones found");
       showFancyToast(
-        success: false,
         context,
+        success: false,
         message: trSafe(
           "common.phone_missing",
           fallback: "رقم الهاتف غير موجود",
@@ -318,7 +394,11 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
 
     if (!ok || !mounted) return;
 
-    final confirmed = await _showRestaurantCallConfirmSheet(selectedPhone);
+    final confirmed = await _showRestaurantCallConfirmSheet(
+      selectedPhone,
+      willSendToKitchenAfterConfirm:
+          autoSendAfterConfirmation && !sentToKitchen,
+    );
     _log("☎️ confirm sheet returned => $confirmed");
 
     if (!confirmed || !mounted) return;
@@ -329,15 +409,20 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     }
 
     showFancyToast(
-      success: true,
       context,
-      message: trSafe(
-        "tracking.restaurant_called",
-        fallback: "تم تأكيد التواصل مع المطعم",
-      ),
+      success: true,
+      message: autoSendAfterConfirmation
+          ? trSafe(
+              "tracking.restaurant_called",
+              fallback: "تم تأكيد التواصل مع المطعم",
+            )
+          : trSafe(
+              "tracking.restaurant_called_start_inway_enabled",
+              fallback: "تم تأكيد التواصل مع المطعم، يمكنك الآن البدء بالطريق.",
+            ),
     );
 
-    if (autoSendAfterConfirmation) {
+    if (autoSendAfterConfirmation && !sentToKitchen) {
       _log("☎️ auto send to kitchen triggered");
       await _sendToKitchenFlow(source: "contact_confirm_yes", force: true);
     } else {
@@ -430,7 +515,20 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     );
   }
 
-  Future<bool> _showRestaurantCallConfirmSheet(String phone) async {
+  Future<bool> _showRestaurantCallConfirmSheet(
+    String phone, {
+    bool willSendToKitchenAfterConfirm = false,
+  }) async {
+    final desc = willSendToKitchenAfterConfirm
+        ? trSafe(
+            "tracking.confirm_restaurant_call_desc_send_to_kitchen",
+            fallback: "أكد العملية حتى نكمل إرسال الطلب للمطبخ.",
+          )
+        : trSafe(
+            "tracking.confirm_restaurant_call_desc_start_inway",
+            fallback: "أكد العملية حتى نسمح لك بالضغط على ابدأ الطريق.",
+          );
+
     final result = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: false,
@@ -483,7 +581,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "$phone\n${trSafe("tracking.confirm_restaurant_call_desc", fallback: "أكيد العملية حتى نكمل إرسال الطلب للمطبخ.")}",
+                  "$phone\n$desc",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontFamily: "Cairo",
@@ -554,6 +652,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   Future<void> _exitAndClearCache() async {
     try {
       await AuthStorageHelper.clearActiveOrder();
+      await _clearSentToKitchenFlag();
     } catch (_) {}
 
     _stopLocationSending();
@@ -573,6 +672,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     _loadMarkerIcons();
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _restoreSentToKitchenFlag();
       await _loadOrderDetails();
       await fitCameraByStatus();
       await _startLocationSending();
@@ -945,13 +1045,39 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   }
 
   Future<void> _callRestaurantAt(int index) async {
+    final s = _orderStatus();
+
+    final shouldAutoSendAfterConfirmation =
+        !_statusIsPreparing(s) && !sentToKitchen;
+
     await _startRestaurantContactFlow(
       forcedPhoneIndex: index,
-      autoSendAfterConfirmation: true,
+      autoSendAfterConfirmation: shouldAutoSendAfterConfirmation,
     );
   }
 
   Future<void> startInWay() async {
+    if (!sentToKitchen) {
+      showFancyToast(
+        context,
+        success: false,
+        message: trSafe(
+          "tracking.must_send_to_kitchen_first",
+          fallback: "يجب إرسال الطلب للمطبخ أولاً قبل البدء بالطريق.",
+        ),
+      );
+      return;
+    }
+
+    if (!restaurantCalled) {
+      showFancyToast(
+        context,
+        success: false,
+        message: _startInWayBlockedMessage(),
+      );
+      return;
+    }
+
     final ok = await context.read<OrderStatusCubit>().changeToInWay(
       widget.orderId,
     );
@@ -1137,6 +1263,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     await _showDeliveredSuccessDialog();
 
     await AuthStorageHelper.clearActiveOrder();
+    await _clearSentToKitchenFlag();
     _stopLocationSending();
 
     goHomeAndClearStack();
@@ -1241,7 +1368,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
 
         state.whenOrNull(
           success: (_, message) {
-            showFancyToast(context, message: trMaybe(message));
+            showFancyToast(context, success: true, message: trMaybe(message));
             context.read<OrderStatusCubit>().reset();
           },
           error: (_, message) {
@@ -1249,7 +1376,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
               setState(() => primaryLoading = false);
             }
 
-            showFancyToast(success: false, context, message: trMaybe(message));
+            showFancyToast(context, success: false, message: trMaybe(message));
             context.read<OrderStatusCubit>().reset();
           },
         );
@@ -1334,6 +1461,8 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
                                 onNavigateTo: openNavigationTo,
                                 primaryBtnText: _primaryBtnText(),
                                 primaryBtnEnabled: _primaryBtnEnabled,
+                                showPrimaryHint: _primaryHintText() != null,
+                                primaryHintText: _primaryHintText(),
                                 onPrimaryPressed: _onPrimaryPressed,
                                 onEmergencyPressed: sendEmergency,
                               ),

@@ -2,6 +2,7 @@ import 'package:breez_food_driver/core/services/price_formatter.dart';
 import 'package:breez_food_driver/core/style/app_theme.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as nt;
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 
@@ -508,6 +509,7 @@ class EarningsFilterChipModel {
 class EarningsOrderCard extends StatelessWidget {
   final String orderNumber;
   final bool isVip;
+  final String deliveredAt;
   final String restaurantName;
   final String restaurantLogoUrl;
   final double distanceKm;
@@ -521,6 +523,7 @@ class EarningsOrderCard extends StatelessWidget {
   final String note;
 
   const EarningsOrderCard({
+    required this.deliveredAt,
     super.key,
     required this.orderNumber,
     required this.isVip,
@@ -541,11 +544,35 @@ class EarningsOrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return EarningsCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            textDirection: nt.TextDirection.ltr,
             children: [
-              if (isVip)
+              Expanded(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'earnings.order_number'.tr(),
+                      textAlign: TextAlign.right,
+                      style: TextStyle(color: Colors.white70, fontSize: 12.sp),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      '#$orderNumber',
+                      textAlign: TextAlign.right,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (isVip) ...[
+                SizedBox(width: 10.w),
                 Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: 14.w,
@@ -564,38 +591,12 @@ class EarningsOrderCard extends StatelessWidget {
                     ),
                   ),
                 ),
-              const Spacer(),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'earnings.order_number'.tr(),
-                    style: TextStyle(color: Colors.white70, fontSize: 12.sp),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    '#$orderNumber',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20.sp,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ],
           ),
           SizedBox(height: 16.h),
           Row(
             children: [
-              Expanded(
-                child: _OrderMeta(
-                  label: 'earnings.distance'.tr(),
-                  value: '${distanceKm.toStringAsFixed(1)} KM',
-                  icon: Icons.route_rounded,
-                ),
-              ),
-              SizedBox(width: 12.w),
               Expanded(
                 child: _OrderMeta(
                   label: 'earnings.restaurant'.tr(),
@@ -604,6 +605,14 @@ class EarningsOrderCard extends StatelessWidget {
                       : restaurantName,
                   icon: Icons.storefront_outlined,
                   imageUrl: restaurantLogoUrl,
+                ),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: _OrderMeta(
+                  label: 'earnings.distance'.tr(),
+                  value: '${distanceKm.toStringAsFixed(1)} KM',
+                  icon: Icons.route_rounded,
                 ),
               ),
             ],
