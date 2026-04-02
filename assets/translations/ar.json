@@ -99,7 +99,17 @@
     "order_amount": "الطلبات",
     "delivery_fee": "التوصيل",
     "total": "الإجمالي",
-    "currency": "ل.س"
+    "currency": "ل.س",
+    "order_number": "رقم الطلب",
+    "distance": "المسافة",
+    "restaurant": "المطعم",
+    "unknown_restaurant": "مطعم غير معروف",
+    "customer_amount": "مبلغ الزبون",
+    "driver_earning": "ربح السائق",
+    "company_from_restaurant": "عمولة الشركة من المطعم",
+    "vip_price": "سعر VIP",
+    "delivery_unknown": "موقع توصيل غير معروف",
+    "delivery_to": "التوصيل إلى"
   },
   "errors": {
     "operation_failed": "فشلت العملية",

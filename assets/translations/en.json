@@ -150,7 +150,17 @@
     "order_amount": "Order amount",
     "delivery_fee": "Delivery fee",
     "total": "Total",
-    "currency": "$"
+    "currency": "$",
+    "order_number": "order number",
+    "distance": "Distance",
+    "restaurant": "Restaurant",
+    "unknown_restaurant": "Unknown restaurant",
+    "customer_amount": "Customer amount",
+    "driver_earning": "Driver earning",
+    "company_from_restaurant": "Company commission from restaurant",
+    "vip_price": "VIP price",
+    "delivery_unknown": "Unknown delivery location",
+    "delivery_to": "Delivery to"
   },
   "offer": {
     "error_title": "Offer error",
