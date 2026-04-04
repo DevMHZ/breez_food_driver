@@ -139,7 +139,7 @@ class _EarningsMainViewState extends State<_EarningsMainView> {
                   ),
                   Expanded(
                     child: EarningsToggleTab(
-                      title: 'الشركة',
+                      title: 'شركة Breeze',
                       selected: _tab == _EarningsMainTab.company,
                       onTap: () => setState(() => _tab = _EarningsMainTab.company),
                     ),
@@ -148,12 +148,10 @@ class _EarningsMainViewState extends State<_EarningsMainView> {
               ),
               SizedBox(height: 6.h),
               Row(
+                textDirection: Directionality.of(context),
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  EarningsDatePickerChip(
-                    label: _dateChipLabel(),
-                    onTap: _pickDate,
-                  ),
-                  SizedBox(width: 12.w),
+                  // 🔹 النصوص (العنوان + التاريخ)
                   Expanded(
                     child: BlocBuilder<EarningsCubit, EarningsState>(
                       builder: (context, state) {
@@ -181,6 +179,14 @@ class _EarningsMainViewState extends State<_EarningsMainView> {
                         );
                       },
                     ),
+                  ),
+
+                  SizedBox(width: 12.w),
+
+                  // 🔹 الفلتر (التاريخ)
+                  EarningsDatePickerChip(
+                    label: _dateChipLabel(),
+                    onTap: _pickDate,
                   ),
                 ],
               ),
@@ -429,27 +435,33 @@ class _CompanyTabContent extends StatelessWidget {
         ListView(
           physics: const BouncingScrollPhysics(),
           children: [
-            EarningsCard(
-              child: Row(
-                children: [
-                  Expanded(
+            Row(
+              children: [
+                Expanded(
+                  child: EarningsCard(
+                    padding: EdgeInsets.all(16.w),
                     child: _TopAmountBlock(
-                      icon: Icons.assignment_return_outlined,
-                      label: 'المبلغ المعلّق',
-                      value: context.syp(data.transactions.pendingAmount),
-                    ),
-                  ),
-                  SizedBox(width: 10.w),
-                  Expanded(
-                    child: _TopAmountBlock(
-                      icon: Icons.assignment_turned_in_outlined,
-                      label: 'المبلغ المدفوع',
+                      label: 'العهدة الأولية',
                       value: context.syp(data.transactions.paidAmount),
                     ),
                   ),
-                ],
-              ),
+                ),
+                SizedBox(width: 10.w),
+                Expanded(
+                  child: EarningsCard(
+                    padding: EdgeInsets.all(16.w), // 👈 مهم
+                    child: _TopAmountBlock(
+                      label: 'العهدة المتبقية',
+                      value: context.syp(data.transactions.pendingAmount),
+                    ),
+                  ),
+                ),
+
+
+              ],
             ),
+
+
             SizedBox(height: 10.h),
             EarningsCard(
               child: Column(
@@ -500,6 +512,7 @@ class _CompanyTabContent extends StatelessWidget {
                 Expanded(
                   child: EarningsCountCard(
                     iconAsset: 'assets/b_driver/regular_orders.svg',
+
                     label: 'طلبات عادية',
                     count: data.ordersStats.regular,
                   ),
@@ -511,8 +524,8 @@ class _CompanyTabContent extends StatelessWidget {
               children: [
                 Expanded(
                   child: EarningsStatCard(
-                    icon: Icons.attach_money_outlined,
-                    label: 'إجمالي الطلبات المميزة',
+                    icon: Icons.payments_outlined,
+                    label: 'إجمالي الطلبات VIP',
                     value: context.syp(data.amountsByType.vipTotal),
                     compact: true,
                   ),
@@ -533,7 +546,7 @@ class _CompanyTabContent extends StatelessWidget {
               children: [
                 Expanded(
                   child: EarningsStatCard(
-                    icon: Icons.admin_panel_settings_outlined,
+                    icon: Icons.payments_outlined,
                     label: 'نسبة الإدارة من الطلبات المميزة',
                     value: context.syp(data.adminFees.fromVip),
                     compact: true,
@@ -542,7 +555,7 @@ class _CompanyTabContent extends StatelessWidget {
                 SizedBox(width: 10.w),
                 Expanded(
                   child: EarningsStatCard(
-                    icon: Icons.admin_panel_settings_outlined,
+                    icon: Icons.payments_outlined,
                     label: 'نسبة الإدارة من الطلبات العادية',
                     value: context.syp(data.adminFees.fromRegular),
                     compact: true,
@@ -551,13 +564,13 @@ class _CompanyTabContent extends StatelessWidget {
               ],
             ),
             SizedBox(height: 10.h),
-            EarningsCard(
-              child: _LargeMetricLine(
-                label: 'الإجمالي العام',
-                value: context.syp(data.amountsByType.grandTotal),
-              ),
-            ),
-            SizedBox(height: 18.h),
+            // EarningsCard(
+            //   child: _LargeMetricLine(
+            //     label: 'الإجمالي العام',
+            //     value: context.syp(data.amountsByType.grandTotal),
+            //   ),
+            // ),
+            // SizedBox(height: 18.h),
           ],
         ),
         if (isRefreshing)
@@ -579,40 +592,69 @@ class _CompanyTabContent extends StatelessWidget {
 }
 
 class _TopAmountBlock extends StatelessWidget {
-  final IconData icon;
   final String label;
   final String value;
 
   const _TopAmountBlock({
-    required this.icon,
     required this.label,
     required this.value,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: Colors.white70, size: 18.sp),
-        SizedBox(height: 14.h),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white70,
-            fontSize: 12.sp,
+    return SizedBox(
+      height: 80.h, // 👈 يوحد ارتفاع الكرتين
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 🔹 صف الأيقونة + النص
+          Row(
+            children: [
+              Container(
+                width: 34.w,
+                height: 34.w,
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(
+                  Icons.payments_outlined,
+
+                  color: const Color(0xFF00C853),
+                  size: 18.sp,
+                ),
+              ),
+              SizedBox(width: 10.w),
+
+              // 👇 مهم ليلف النص مثل الصورة
+              Expanded(
+                child: Text(
+                  label,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13.sp,
+                    height: 1.3, // 👈 نفس السطرين بالصورة
+                  ),
+                ),
+              ),
+            ],
           ),
-        ),
-        SizedBox(height: 4.h),
-        Text(
-          value,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 22.sp,
-            fontWeight: FontWeight.w700,
+
+          const Spacer(), // 👈 يدفع الرقم للأسفل
+
+          // 🔹 الرقم
+          Text(
+            value,
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20.sp,
+              fontWeight: FontWeight.w700,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

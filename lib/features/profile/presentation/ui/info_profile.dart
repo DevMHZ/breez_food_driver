@@ -7,7 +7,9 @@ import 'package:breez_food_driver/features/profile/presentation/cubit/profile_cu
 import 'package:breez_food_driver/features/profile/presentation/widget/custom_textfaild_info.dart';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:easy_localization/easy_localization.dart' show StringTranslateExtension;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -267,16 +269,37 @@ class _InfoProfileState extends State<InfoProfile> {
           );
 
           return Scaffold(
-            backgroundColor: AppTheme.Dark,
-            appBar: PreferredSize(
-              preferredSize: Size.fromHeight(60.h),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: CustomAppbarProfile(
-                  title: "الملف الشخصي",
-                  icon: Icons.arrow_back_ios,
-                  ontap: () => Navigator.pop(context),
-                ),
+            backgroundColor: AppTheme.black.withOpacity(0.35),
+            // appBar: PreferredSize(
+            //   preferredSize: Size.fromHeight(60.h),
+            //   child: Padding(
+            //     padding: EdgeInsets.symmetric(horizontal: 16.w),
+            //     child: CustomAppbarProfile(
+            //       title: "الملف الشخصي",
+            //       icon: Icons.arrow_back_ios,
+            //       ontap: () => Navigator.pop(context),
+            //     ),
+            //   ),
+            // ),
+            appBar: AppBar(
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              surfaceTintColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              automaticallyImplyLeading: false,
+              toolbarHeight: 80.h,
+              systemOverlayStyle: const SystemUiOverlayStyle(
+                statusBarColor: Colors.transparent,
+                statusBarIconBrightness: Brightness.light,
+                statusBarBrightness: Brightness.dark,
+              ),
+              titleSpacing: 0,
+              title: CustomAppbarProfile(
+                icon: Icons.arrow_back_ios,
+                ontap: () => Navigator.pop(context),
+                title: 'drawer.profile_title'.tr(),
+
+                backgroundcolor: Colors.transparent,
               ),
             ),
             body: state.maybeWhen(

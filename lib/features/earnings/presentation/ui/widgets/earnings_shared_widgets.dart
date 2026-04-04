@@ -199,35 +199,69 @@ class EarningsStatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return EarningsCard(
       onTap: onTap,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child:
+      // Column(
+      //   crossAxisAlignment: CrossAxisAlignment.start,
+      //   children: [
+      //     _BadgeIcon(icon: icon, svgAsset: svgAsset),
+      //     SizedBox(height: compact ? 10.h : 16.h),
+      //     Text(
+      //       label,
+      //       style: TextStyle(
+      //         color: Colors.white70,
+      //         fontSize: compact ? 12.sp : 13.sp,
+      //         fontWeight: FontWeight.w500,
+      //       ),
+      //     ),
+      //     SizedBox(height: 6.h),
+      //     Text(
+      //       value,
+      //       style: TextStyle(
+      //         color: Colors.white,
+      //         fontSize: compact ? 18.sp : 21.sp,
+      //         fontWeight: FontWeight.w700,
+      //       ),
+      //     ),
+      //     if (subValue != null && subValue!.trim().isNotEmpty) ...[
+      //       SizedBox(height: 4.h),
+      //       Text(
+      //         subValue!,
+      //         style: TextStyle(color: Colors.white54, fontSize: 11.sp),
+      //       ),
+      //     ],
+      //   ],
+      // ),
+      Column(crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _BadgeIcon(icon: icon, svgAsset: svgAsset),
-          SizedBox(height: compact ? 10.h : 16.h),
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: compact ? 12.sp : 13.sp,
-              fontWeight: FontWeight.w500,
+          Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // 🔹 النص (العنوان)
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ),
-          ),
-          SizedBox(height: 6.h),
+
+            _BadgeIcon(icon: icon, svgAsset: svgAsset),
+
+          ],
+              ),
           Text(
+
             value,
             style: TextStyle(
               color: Colors.white,
-              fontSize: compact ? 18.sp : 21.sp,
+              fontSize: 20.sp,
               fontWeight: FontWeight.w700,
             ),
           ),
-          if (subValue != null && subValue!.trim().isNotEmpty) ...[
-            SizedBox(height: 4.h),
-            Text(
-              subValue!,
-              style: TextStyle(color: Colors.white54, fontSize: 11.sp),
-            ),
-          ],
         ],
       ),
     );
