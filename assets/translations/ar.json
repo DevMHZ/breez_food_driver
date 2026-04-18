@@ -142,8 +142,11 @@
     "status_on_the_way": "بالطريق",
     "status_accepted": "تم القبول - جاهز للانطلاق",
     "order_line": "طلب رقم #{id} • {status}",
-    "start_inway": "ابدأ (بالطريق)",
-    "delivered": "تم التسليم"
+    "start_inway": "تم استلام الطلب من المطعم",
+    "delivered": "تم التسليم",
+    "confirm_order_received_title": "هل تم استلام الطلب من المطعم وتريد ان تبدا الطريق الى الزبون",
+    "confirm_order_received_desc": "أكد عملية استلام الطلب من المطعم حتى تكمل الطريق الى الزبون",
+    "order_received_confirmed": "تم استلام الطلب من المطعم"
   },
   "order": {
     "total": "الإجمالي",

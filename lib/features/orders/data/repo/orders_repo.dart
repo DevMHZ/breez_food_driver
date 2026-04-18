@@ -7,7 +7,10 @@ class OrdersRepository {
   final OrdersApiService api;
   OrdersRepository(this.api);
 
-  AppResponse _mapSuccess(HttpResponse<dynamic> res, {String? fallbackMessage}) {
+  AppResponse _mapSuccess(
+    HttpResponse<dynamic> res, {
+    String? fallbackMessage,
+  }) {
     final raw = res.data;
 
     if (raw is Map<String, dynamic>) {
@@ -17,19 +20,13 @@ class OrdersRepository {
       );
     }
 
-    return AppResponse.ok(
-      data: raw,
-      message: fallbackMessage,
-    );
+    return AppResponse.ok(data: raw, message: fallbackMessage);
   }
 
   Future<AppResponse> sendOrderToKitchen(int orderId) async {
     try {
       final res = await api.sendOrderToKitchen({"order_id": orderId});
-      return _mapSuccess(
-        res,
-        fallbackMessage: "تم إرسال الطلب إلى المطبخ",
-      );
+      return _mapSuccess(res, fallbackMessage: "تم إرسال الطلب إلى المطبخ");
     } on DioException catch (e) {
       return AppResponseHandler.handleError(e);
     } catch (_) {
@@ -40,10 +37,7 @@ class OrdersRepository {
   Future<AppResponse> changeToInWay(int orderId) async {
     try {
       final res = await api.changeToInWay({"order_id": orderId});
-      return _mapSuccess(
-        res,
-        fallbackMessage: "تم تغيير الحالة إلى بالطريق",
-      );
+      return _mapSuccess(res, fallbackMessage: "تم تغيير الحالة إلى بالطريق");
     } on DioException catch (e) {
       return AppResponseHandler.handleError(e);
     } catch (_) {
@@ -87,11 +81,19 @@ class OrdersRepository {
     required String reason,
   }) async {
     try {
-      final res = await api.emergency({"order_id": orderId, "reason": reason});
-      return _mapSuccess(
-        res,
-        fallbackMessage: "تم إرسال البلاغ",
+      print("🔗 [REPO] Making emergency API call...");
+      print("📋 Order ID: $orderId");
+      print("📝 Reason: $reason");
+      print(
+        "📤 Full payload: {\"order_id\": $orderId, \"reason\": \"$reason\"}",
       );
+
+      final res = await api.emergency({"order_id": orderId, "reason": reason});
+
+      print("📡 [API RESPONSE] Response received");
+      print("📦 [API RESPONSE] Data: ${res.data}");
+
+      return _mapSuccess(res, fallbackMessage: "تم إرسال البلاغ");
     } on DioException catch (e) {
       return AppResponseHandler.handleError(e);
     } catch (_) {

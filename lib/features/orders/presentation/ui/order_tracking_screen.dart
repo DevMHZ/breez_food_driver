@@ -75,7 +75,9 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   }
 
   String get _sentToKitchenFlagKey => 'order_${widget.orderId}_sent_to_kitchen';
-
+  //من أجل حفظ حالة انه تم الاتصال بالمطعم
+  String get _restaurantCalledKey =>
+      'order_${widget.orderId}_restaurant_called';
   Future<void> _restoreSentToKitchenFlag() async {
     final localFlag =
         (await AuthStorageHelper.getFlag(_sentToKitchenFlagKey)) ?? false;
@@ -97,6 +99,26 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
   Future<void> _clearSentToKitchenFlag() async {
     await AuthStorageHelper.setFlag(_sentToKitchenFlagKey, false);
     _log("📦 clear sentToKitchen flag");
+  }
+
+  // دالة حفظ حالة تم الاتصال بالمطعم
+  Future<void> _saveRestaurantCalledFlag(bool value) async {
+    await AuthStorageHelper.setFlag(_restaurantCalledKey, value);
+    _log("📦 save restaurantCalled flag => $value");
+  }
+
+  //دالة الاسترجاع
+  Future<void> _restoreRestaurantCalledFlag() async {
+    final localFlag =
+        (await AuthStorageHelper.getFlag(_restaurantCalledKey)) ?? false;
+
+    if (!mounted) return;
+
+    setState(() {
+      restaurantCalled = localFlag;
+    });
+
+    _log("📦 restore restaurantCalled => $restaurantCalled");
   }
 
   List<String> restaurantPhones() {
@@ -272,7 +294,10 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     }
 
     if (!inWay) {
-      await startInWay();
+      final confirmed = await _showOrderReceivedConfirmationDialog();
+      if (confirmed) {
+        await startInWay();
+      }
       return;
     }
 
@@ -405,6 +430,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
 
     if (!restaurantCalled) {
       setState(() => restaurantCalled = true);
+      await _saveRestaurantCalledFlag(true); // 👈 مهم جدًا
       _log("☎️ restaurantCalled set to true");
     }
 
@@ -649,10 +675,143 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     return result ?? false;
   }
 
+  Future<bool> _showOrderReceivedConfirmationDialog() async {
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: false,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // handle
+                Container(
+                  width: 42,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // icon
+                // Container(
+                //   width: 62,
+                //   height: 62,
+                //   decoration: BoxDecoration(
+                //     shape: BoxShape.circle,
+                //     color: Colors.green.withOpacity(0.10),
+                //   ),
+                //   child: const Icon(
+                //     Icons.headset_mic_rounded,
+                //     size: 30,
+                //     color: Colors.green,
+                //   ),
+                // ),
+                const SizedBox(height: 14),
+
+                // title
+                const Text(
+                  "هل تم استلام الطلب من المطعم وتريد ان تبدا الطريق الى الزبون؟",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF1C1C1C), // 🔥 لون غامق أنيق
+                    height: 1.4, //
+                    fontFamily: "Cairo",
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
+                // description
+                Text(
+                  "أكد عملية استلام الطلب من المطعم حتى تكمل الطريق الى الزبون",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: "Cairo",
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black.withOpacity(0.65),
+                    height: 1.5,
+                  ),
+                ),
+
+                const SizedBox(height: 18),
+
+                // buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          "إلغاء",
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontFamily: "Cairo",
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 10),
+
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(ctx, true),
+                        style: ElevatedButton.styleFrom(
+                          elevation: 0,
+                          backgroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 13),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        child: const Text(
+                          "تم استلام الطلب ",
+                          style: TextStyle(
+                            fontFamily: "Cairo",
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+
+    return result ?? false;
+  }
+
   Future<void> _exitAndClearCache() async {
     try {
       await AuthStorageHelper.clearActiveOrder();
       await _clearSentToKitchenFlag();
+      await AuthStorageHelper.setFlag(_restaurantCalledKey, false);
     } catch (_) {}
 
     _stopLocationSending();
@@ -673,6 +832,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _restoreSentToKitchenFlag();
+      await _restoreRestaurantCalledFlag(); //دالة الاسترجاع الحالة
       await _loadOrderDetails();
       await fitCameraByStatus();
       await _startLocationSending();
@@ -864,6 +1024,10 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
         details = raw.cast<String, dynamic>();
       });
 
+      print("🧾 FULL DETAILS: $details");
+      print("📦 ORDER: ${details?['order']}");
+      print("🍔 item total: ${details?['order']?['items_total']}");
+      print("💰 total: ${details?['order']?['total']}");
       _syncFlagsFromStatus();
       await fitCameraByStatus();
     } catch (e) {
@@ -1264,6 +1428,7 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
 
     await AuthStorageHelper.clearActiveOrder();
     await _clearSentToKitchenFlag();
+    await AuthStorageHelper.setFlag(_restaurantCalledKey, false);
     _stopLocationSending();
 
     goHomeAndClearStack();
@@ -1277,10 +1442,20 @@ class _OrderTrackingScreenState extends State<OrderTrackingScreen>
     );
     if (reason == null || reason.trim().isEmpty) return;
 
+    print("🌐 [API CALL] About to send emergency report...");
+    print("📋 Order ID: ${widget.orderId}");
+    print("📝 Reason: ${reason.trim()}");
+    print(
+      "📤 Payload: {\"order_id\": ${widget.orderId}, \"reason\": \"${reason.trim()}\"}",
+    );
+
     final ok = await context.read<OrderStatusCubit>().sendEmergency(
       orderId: widget.orderId,
       reason: reason.trim(),
     );
+
+    print("✅ [API RESPONSE] Emergency report result: $ok");
+
     if (!ok || !mounted) return;
 
     showFancyToast(

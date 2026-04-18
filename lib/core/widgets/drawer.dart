@@ -1,9 +1,9 @@
 import 'package:breez_food_driver/core/di/di.dart';
+import 'package:breez_food_driver/core/router/navigation_key.dart';
 import 'package:breez_food_driver/core/services/url_helper.dart';
 import 'package:breez_food_driver/core/style/app_theme.dart';
 import 'package:breez_food_driver/core/widgets/logout_dialog.dart';
 import 'package:breez_food_driver/features/auth/data/repo/auth_repository.dart';
-import 'package:breez_food_driver/features/auth/presentation/cubit/auth_flow_cubit.dart';
 import 'package:breez_food_driver/features/auth/presentation/ui/login_page.dart';
 import 'package:breez_food_driver/features/earnings/data/repo/earnings_repo.dart';
 import 'package:breez_food_driver/features/earnings/presentation/ui/earning_main_screen.dart';
@@ -26,25 +26,65 @@ class CustomDrawer extends StatelessWidget {
 
     showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (dialogCtx) {
         return LogoutDialog(
           onLogoutConfirmed: () async {
-            Navigator.of(dialogCtx).pop();
+            Navigator.pop(dialogCtx); // إغلاق dialog
 
-            final repo = getIt<AuthRepository>();
-            final service = LogoutService(repo);
+            try {
+              final repo = getIt<AuthRepository>();
+              final result = await repo.logout();
 
-            await service.logoutAndRedirect(
-              context,
-              loginBuilder: () => const Login(),
-              onMessage: (msg) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(msg)));
-              },
-            );
+              print('Logout result: ${result.ok}, message: ${result.message}');
+
+              print('Context mounted: ${context.mounted}');
+
+              if (!context.mounted) return;
+
+              if (result.ok) {
+                print('About to navigate to login...');
+                print(
+                  'NavigationKey available: ${NavigationKey.navigatorKey.currentState != null}',
+                );
+
+                // الانتقال للـ Login مع مسح كل الصفحات
+                NavigationKey.navigatorKey.currentState?.pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const Login()),
+                  (route) => false,
+                );
+
+                print('Navigation completed!');
+
+                // إظهار رسالة نجاح
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(result.message ?? "تم تسجيل الخروج بنجاح"),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } else {
+                print('Logout failed: ${result.message}');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(result.message ?? "فشل تسجيل الخروج"),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            } catch (e) {
+              print('Logout error: $e');
+              if (!context.mounted) return;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text("حدث خطأ أثناء تسجيل الخروج"),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
           },
-          onCancel: () => Navigator.of(dialogCtx).pop(),
+          onCancel: () => Navigator.pop(dialogCtx),
         );
       },
     );

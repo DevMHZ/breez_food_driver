@@ -2,7 +2,8 @@
     <application
         android:label="breez_food_driver"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
           <meta-data android:name="com.google.android.geo.API_KEY" android:value="AIzaSyCfXnfJAD4JnbM5JjF8zRD4HxW_0cc1MLU"/>
         <activity
             android:name=".MainActivity"

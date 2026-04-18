@@ -19,7 +19,11 @@ class _EmergencyDialogState extends State<EmergencyDialog> {
     _Preset(key: "car", label: "حادث سيارة", icon: Icons.car_crash),
     _Preset(key: "medical", label: "مشكلة صحية", icon: Icons.health_and_safety),
     _Preset(key: "security", label: "مشكلة أمنية", icon: Icons.security),
-    _Preset(key: "breakdown", label: "تعطّل الدراجة/السيارة", icon: Icons.build_circle),
+    _Preset(
+      key: "breakdown",
+      label: "تعطّل الدراجة/السيارة",
+      icon: Icons.build_circle,
+    ),
     _Preset(key: "other", label: "سبب آخر", icon: Icons.more_horiz),
   ];
 
@@ -55,6 +59,12 @@ class _EmergencyDialogState extends State<EmergencyDialog> {
 
   void _send() {
     final reason = _ctrl.text.trim();
+    print("🚨 Sending emergency...");
+    print("📝 Reason: $reason");
+    print("📦 Order ID: ${widget.orderId}");
+    print(
+      "📤 Data to be sent: {\"order_id\": ${widget.orderId}, \"reason\": \"$reason\"}",
+    );
     if (reason.isEmpty) return;
     Navigator.pop(context, reason);
   }
@@ -104,7 +114,9 @@ class _EmergencyDialogState extends State<EmergencyDialog> {
                             decoration: BoxDecoration(
                               color: Colors.red.withOpacity(.16),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.red.withOpacity(.35)),
+                              border: Border.all(
+                                color: Colors.red.withOpacity(.35),
+                              ),
                             ),
                             child: const Icon(
                               Icons.warning_amber_rounded,
@@ -138,7 +150,11 @@ class _EmergencyDialogState extends State<EmergencyDialog> {
                                   color: AppTheme.LightActive.withOpacity(.15),
                                 ),
                               ),
-                              child: const Icon(Icons.close, color: Colors.white, size: 18),
+                              child: const Icon(
+                                Icons.close,
+                                color: Colors.white,
+                                size: 18,
+                              ),
                             ),
                           ),
                         ],
@@ -153,7 +169,9 @@ class _EmergencyDialogState extends State<EmergencyDialog> {
                         decoration: BoxDecoration(
                           color: AppTheme.Dark.withOpacity(.35),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white.withOpacity(.08)),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(.08),
+                          ),
                         ),
                         child: Text(
                           "الرجاء تحديد سبب البلاغ للطلب رقم #${widget.orderId}.\nسيتم إرسال البلاغ للإدارة فوراً.",
@@ -194,7 +212,10 @@ class _EmergencyDialogState extends State<EmergencyDialog> {
                             onTap: () => _selectPreset(p),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 180),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
                               decoration: BoxDecoration(
                                 color: selected
                                     ? Colors.red.shade700
@@ -233,7 +254,9 @@ class _EmergencyDialogState extends State<EmergencyDialog> {
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(.06),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.white.withOpacity(.10)),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(.10),
+                          ),
                         ),
                         child: TextField(
                           controller: _ctrl,
@@ -254,8 +277,14 @@ class _EmergencyDialogState extends State<EmergencyDialog> {
                               fontFamily: "Cairo",
                             ),
                             border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            prefixIcon: Icon(Icons.edit_note, color: Colors.white.withOpacity(.7)),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                            prefixIcon: Icon(
+                              Icons.edit_note,
+                              color: Colors.white.withOpacity(.7),
+                            ),
                             suffixIcon: _ctrl.text.trim().isEmpty
                                 ? null
                                 : IconButton(
@@ -263,7 +292,10 @@ class _EmergencyDialogState extends State<EmergencyDialog> {
                                       _ctrl.clear();
                                       setState(() {});
                                     },
-                                    icon: Icon(Icons.clear, color: Colors.white.withOpacity(.7)),
+                                    icon: Icon(
+                                      Icons.clear,
+                                      color: Colors.white.withOpacity(.7),
+                                    ),
                                   ),
                           ),
                         ),
@@ -294,15 +326,22 @@ class _EmergencyDialogState extends State<EmergencyDialog> {
                               onPressed: () => Navigator.pop(context),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: Colors.white,
-                                side: BorderSide(color: Colors.white.withOpacity(.18)),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                side: BorderSide(
+                                  color: Colors.white.withOpacity(.18),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                               ),
                               child: const Text(
                                 "إلغاء",
-                                style: TextStyle(fontWeight: FontWeight.w900, fontFamily: "Cairo"),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontFamily: "Cairo",
+                                ),
                               ),
                             ),
                           ),
@@ -313,14 +352,22 @@ class _EmergencyDialogState extends State<EmergencyDialog> {
                               icon: const Icon(Icons.send_rounded, size: 18),
                               label: const Text(
                                 "إرسال",
-                                style: TextStyle(fontWeight: FontWeight.w900, fontFamily: "Cairo"),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontFamily: "Cairo",
+                                ),
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.red.shade700,
                                 foregroundColor: Colors.white,
-                                disabledBackgroundColor: Colors.red.withOpacity(.25),
-                                disabledForegroundColor: Colors.white.withOpacity(.65),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                disabledBackgroundColor: Colors.red.withOpacity(
+                                  .25,
+                                ),
+                                disabledForegroundColor: Colors.white
+                                    .withOpacity(.65),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),

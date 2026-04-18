@@ -35,6 +35,7 @@ enum DriverStatus { offline, connected, searching, offerReceived }
 
 const String general_url = 'https://breezefood.cloud/api';
 
+// const String general_url = 'http://212.11.196.193/api';
 class HomeMapScreen extends StatefulWidget {
   const HomeMapScreen({super.key});
 
@@ -197,8 +198,8 @@ class _HomeMapScreenState extends State<HomeMapScreen>
       Completer<GoogleMapController>();
 
   static const CameraPosition _initialCameraPosition = CameraPosition(
-    target: LatLng(34.8021, 38.9968),
-    zoom: 6.5,
+    target: LatLng(34.8950, 35.8866),
+    zoom: 10.6,
   );
 
   late final HomeRealtimeController _realtime;
