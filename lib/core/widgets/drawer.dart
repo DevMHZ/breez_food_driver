@@ -29,60 +29,74 @@ class CustomDrawer extends StatelessWidget {
       barrierDismissible: false,
       builder: (dialogCtx) {
         return LogoutDialog(
+          // onLogoutConfirmed: () async {
+          //   Navigator.pop(dialogCtx); // إغلاق dialog
+          //
+          //   try {
+          //     final repo = getIt<AuthRepository>();
+          //     final result = await repo.logout();
+          //
+          //     print('Logout result: ${result.ok}, message: ${result.message}');
+          //
+          //     print('Context mounted: ${context.mounted}');
+          //
+          //     if (!context.mounted) return;
+          //
+          //     if (result.ok) {
+          //       print('About to navigate to login...');
+          //       print(
+          //         'NavigationKey available: ${NavigationKey.navigatorKey.currentState != null}',
+          //       );
+          //
+          //       // الانتقال للـ Login مع مسح كل الصفحات
+          //       NavigationKey.navigatorKey.currentState?.pushAndRemoveUntil(
+          //         MaterialPageRoute(builder: (_) => const Login()),
+          //         (route) => false,
+          //       );
+          //
+          //       print('Navigation completed!');
+          //
+          //       // إظهار رسالة نجاح
+          //       ScaffoldMessenger.of(context).showSnackBar(
+          //         SnackBar(
+          //           content: Text(result.message ?? "تم تسجيل الخروج بنجاح"),
+          //           backgroundColor: Colors.green,
+          //         ),
+          //       );
+          //     } else {
+          //       print('Logout failed: ${result.message}');
+          //       ScaffoldMessenger.of(context).showSnackBar(
+          //         SnackBar(
+          //           content: Text(result.message ?? "فشل تسجيل الخروج"),
+          //           backgroundColor: Colors.red,
+          //         ),
+          //       );
+          //     }
+          //   } catch (e) {
+          //     print('Logout error: $e');
+          //     if (!context.mounted) return;
+          //
+          //     ScaffoldMessenger.of(context).showSnackBar(
+          //       SnackBar(
+          //         content: Text("حدث خطأ أثناء تسجيل الخروج"),
+          //         backgroundColor: Colors.red,
+          //       ),
+          //     );
+          //   }
+          // },
           onLogoutConfirmed: () async {
             Navigator.pop(dialogCtx); // إغلاق dialog
 
-            try {
-              final repo = getIt<AuthRepository>();
-              final result = await repo.logout();
+            final repo = getIt<AuthRepository>();
+            await repo.logout();
 
-              print('Logout result: ${result.ok}, message: ${result.message}');
-
-              print('Context mounted: ${context.mounted}');
-
-              if (!context.mounted) return;
-
-              if (result.ok) {
-                print('About to navigate to login...');
-                print(
-                  'NavigationKey available: ${NavigationKey.navigatorKey.currentState != null}',
-                );
-
-                // الانتقال للـ Login مع مسح كل الصفحات
-                NavigationKey.navigatorKey.currentState?.pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const Login()),
-                  (route) => false,
-                );
-
-                print('Navigation completed!');
-
-                // إظهار رسالة نجاح
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(result.message ?? "تم تسجيل الخروج بنجاح"),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } else {
-                print('Logout failed: ${result.message}');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(result.message ?? "فشل تسجيل الخروج"),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            } catch (e) {
-              print('Logout error: $e');
-              if (!context.mounted) return;
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("حدث خطأ أثناء تسجيل الخروج"),
-                  backgroundColor: Colors.red,
-                ),
+            // 🔥 الحل: استخدم navigatorKey بدون شروط
+            Future.delayed(const Duration(milliseconds: 100), () {
+              NavigationKey.navigatorKey.currentState?.pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const Login()),
+                    (route) => false,
               );
-            }
+            });
           },
           onCancel: () => Navigator.pop(dialogCtx),
         );

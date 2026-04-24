@@ -421,11 +421,11 @@ class TrackingPrettyPanel extends StatelessWidget {
                               ),
                             ],
                             const SizedBox(height: 2),
-                            _LabelValueBlock(
-                              label: 'ملاحظة الطلب',
-                              value: orderNote,
-                              icon: Icons.receipt_long_rounded,
-                            ),
+                            // _LabelValueBlock(
+                            //   label: 'ملاحظة الطلب',
+                            //   value: orderNote,
+                            //   icon: Icons.receipt_long_rounded,
+                            // ),
                           ],
                         ),
                       ),
@@ -447,6 +447,7 @@ class TrackingPrettyPanel extends StatelessWidget {
                               ? context.syp(total)
                               : 'لا يوجد',
                           locationNote: addressNote,
+                          orderNote: orderNote,
                           onCall: _isMissingText(customerPhone)
                               ? null
                               : () => _callPhone(customerPhone),
@@ -719,6 +720,7 @@ class _CustomerSummaryCard extends StatelessWidget {
   final String deliveryPrice;
   final String totalPrice;
   final String locationNote;
+  final String orderNote;
   final VoidCallback? onCall;
 
   const _CustomerSummaryCard({
@@ -728,13 +730,13 @@ class _CustomerSummaryCard extends StatelessWidget {
     required this.deliveryPrice,
     required this.totalPrice,
     required this.locationNote,
-    required this.onCall,
+    required this.onCall, required this.orderNote,
   });
 
   @override
   Widget build(BuildContext context) {
     final hasPhone = phone.trim().isNotEmpty && phone.trim() != 'لا يوجد';
-
+    // final orderNote = _v(order['notes'], empty: 'لا يوجد');
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -813,10 +815,15 @@ class _CustomerSummaryCard extends StatelessWidget {
           const SizedBox(height: 12),
           Divider(color: Colors.white.withOpacity(0.08), height: 1),
           const SizedBox(height: 12),
+          // _LabelValueBlock(
+          //   label: 'ملاحظات اللوكيشن',
+          //   value: locationNote,
+          //   icon: Icons.location_on_rounded,
+          // ),
           _LabelValueBlock(
-            label: 'ملاحظات اللوكيشن',
-            value: locationNote,
-            icon: Icons.location_on_rounded,
+            label: 'ملاحظة الطلب',
+            value: orderNote,
+            icon: Icons.receipt_long_rounded,
           ),
           const SizedBox(height: 12),
           _PriceRow(title: 'سعر الوجبة', value: itemsPrice),
