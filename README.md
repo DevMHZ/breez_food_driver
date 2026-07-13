@@ -1,16 +1,44 @@
-# breez_food_driver
+<div align="center">
 
-A new Flutter project.
+# Breeze Food Driver
+
+A Flutter delivery driver application for the **Breeze Food** platform.
+
+</div>
+
+## Overview
+
+The app helps delivery drivers receive and manage orders, track deliveries on the map, update their availability, and view their earnings.
+
+## Main Features
+
+* Driver authentication
+* Receive and manage delivery orders
+* Google Maps and location tracking
+* Online/offline driver status
+* Earnings overview
+* Push notifications
+* Real-time updates
+
+## Built With
+
+* Flutter
+* BLoC / Cubit
+* Dio & Retrofit
+* Firebase Messaging
+* Google Maps
+* Pusher
+* Hive
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+```bash
+git clone https://github.com/DevMHZ/breez_food_driver.git
+cd breez_food_driver
+flutter pub get
+flutter run
+```
 
-A few resources to get you started if this is your first Flutter project:
+## Author
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Developed by [DevMHZ](https://github.com/DevMHZ)
